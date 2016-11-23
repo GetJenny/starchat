@@ -626,8 +626,10 @@ A set of test script is present inside scripts/api_test
 
 ##UI
 
-The user-interface is written in R, to use it, please make sure R is properly installer, and go to /ui
+The user-interface is written in R, to use it, please make sure R is properly installer, and go to /ui.
+
 ```bash
 Rscript run_shiny_ui.R
 ```
 
+Then the ui will appear on localhost:9000
