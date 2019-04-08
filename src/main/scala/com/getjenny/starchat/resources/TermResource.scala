@@ -212,6 +212,54 @@ trait TermResource extends StarChatResource {
                   }
                 }
               }
+            case "term" =>
+              authenticateBasicAsync(realm = authRealm,
+                authenticator = authenticator.authenticator) { user =>
+                authorizeAsync(_ => authenticator.hasPermissions(user, indexName, Permissions.read)) {
+                  entity(as[SearchTerm]) { requestData =>
+                    val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
+                    parameters("analyzer".as[String] ? "space_punctuation") { analyzer =>
+                      onCompleteWithBreaker(breaker)(
+                        termService.searchFuture(indexName = indexName, query = requestData, analyzer = analyzer)
+                      ) {
+                        case Success(t) =>
+                          completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
+                        case Failure(e) =>
+                          log.error("index(" + indexName + ") route=termRoutes method=GET function=term : " +
+                            e.getMessage)
+                          completeResponse(StatusCodes.BadRequest,
+                            Option {
+                              IndexManagementResponse(message = e.getMessage)
+                            })
+                        }
+                      }
+                    }
+                  }
+                }
+            case "text" =>
+              authenticateBasicAsync(realm = authRealm,
+                authenticator = authenticator.authenticator) { user =>
+                authorizeAsync(_ => authenticator.hasPermissions(user, indexName, Permissions.read)) {
+                  entity(as[String]) { requestData =>
+                    val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
+                    parameters("analyzer".as[String] ? "space_punctuation") { analyzer =>
+                      onCompleteWithBreaker(breaker)(
+                        termService.searchFuture(indexName = indexName, query = requestData, analyzer = analyzer)
+                      ) {
+                        case Success(t) =>
+                          completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
+                        case Failure(e) =>
+                          log.error("index(" + indexName + ") route=termRoutes method=GET function=text : " +
+                            e.getMessage)
+                           completeResponse(StatusCodes.BadRequest,
+                            Option {
+                              IndexManagementResponse(message = e.getMessage)
+                            })
+                        }
+                      }
+                    }
+                  }
+                }
             case _ => completeResponse(StatusCodes.BadRequest,
               Option {
                 IndexManagementResponse(message = "index(" + indexName + ") Operation not supported: " +
@@ -239,55 +287,6 @@ trait TermResource extends StarChatResource {
                         })
                     }
                   }
-                }
-              }
-            }
-          }
-        } ~
-        path(Segment) { operation: String =>
-          post {
-            authenticateBasicAsync(realm = authRealm,
-              authenticator = authenticator.authenticator) { user =>
-              authorizeAsync(_ => authenticator.hasPermissions(user, indexName, Permissions.read)) {
-                operation match {
-                  case "term" =>
-                    entity(as[SearchTerm]) { requestData =>
-                      val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
-                      parameters("analyzer".as[String] ? "space_punctuation") { analyzer =>
-                        onCompleteWithBreaker(breaker)(
-                          termService.searchFuture(indexName = indexName, query = requestData, analyzer = analyzer)
-                        ) {
-                          case Success(t) =>
-                            completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
-                          case Failure(e) =>
-                            log.error("index(" + indexName + ") route=termRoutes method=GET function=term : " +
-                              e.getMessage)
-                            completeResponse(StatusCodes.BadRequest,
-                              Option {
-                                IndexManagementResponse(message = e.getMessage)
-                              })
-                        }
-                      }
-                    }
-                  case "text" =>
-                    entity(as[String]) { requestData =>
-                      val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
-                      parameters("analyzer".as[String] ? "space_punctuation") { analyzer =>
-                        onCompleteWithBreaker(breaker)(
-                          termService.searchFuture(indexName = indexName, query = requestData, analyzer = analyzer)
-                        ) {
-                          case Success(t) =>
-                            completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
-                          case Failure(e) =>
-                            log.error("index(" + indexName + ") route=termRoutes method=GET function=text : " +
-                              e.getMessage)
-                            completeResponse(StatusCodes.BadRequest,
-                              Option {
-                                IndexManagementResponse(message = e.getMessage)
-                              })
-                        }
-                      }
-                    }
                 }
               }
             }
