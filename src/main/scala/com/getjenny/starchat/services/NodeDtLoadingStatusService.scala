@@ -52,7 +52,6 @@ object NodeDtLoadingStatusService extends AbstractDataService {
 
     val updateReq = new UpdateRequest()
       .index(indexName)
-      .`type`("_doc")
       .doc(builder)
       .id(id)
       .docAsUpsert(true)
@@ -85,7 +84,6 @@ object NodeDtLoadingStatusService extends AbstractDataService {
 
     val searchReq = new SearchRequest(indexName)
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
 
     val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)

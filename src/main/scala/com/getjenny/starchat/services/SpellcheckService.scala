@@ -18,7 +18,7 @@ import scala.collection.immutable.List
 import scala.concurrent.Future
 
 object SpellcheckService extends AbstractDataService {
-  override val elasticClient = KnowledgeBaseElasticClient
+  override val elasticClient: KnowledgeBaseElasticClient.type = KnowledgeBaseElasticClient
 
   def termsSuggester(indexName: String, request: SpellcheckTermsRequest) : Future[SpellcheckTermsResponse] = Future {
     val client: RestHighLevelClient = elasticClient.httpClient
@@ -37,7 +37,6 @@ object SpellcheckService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
 
     val searchResponse : SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
 

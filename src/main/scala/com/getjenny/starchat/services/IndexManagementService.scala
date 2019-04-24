@@ -20,10 +20,15 @@ import org.elasticsearch.common.settings._
 import org.elasticsearch.common.xcontent.XContentType
 import scalaz.Scalaz._
 
+import scala.collection.immutable.List
 import scala.concurrent.Future
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 case class IndexManagementServiceException(message: String = "", cause: Throwable = None.orNull)
+  extends Exception(message, cause)
+
+case class LangResourceException(message: String = "", cause: Throwable = None.orNull)
   extends Exception(message, cause)
 
 /**
@@ -55,6 +60,55 @@ object IndexManagementService extends AbstractDataService {
       indexSuffix = elasticClient.termIndexSuffix)
   )
 
+  private[this] object LangResourceType extends Enumeration {
+    val STOPWORD,
+    STEMMER_OVERRIDE,
+    UNSPECIFIED = LangResourceType.Value
+    def value(v: String): LangResourceType.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  }
+
+  private[this] val accessoryFilePathTpl = "/index_management/json_index_spec/%1$s/%2$s"
+  private[this] val langSpecificDataFiles: List[(String, LangResourceType.Value)] =
+    List[(String, LangResourceType.Value)](
+      ("stopwords.json", LangResourceType.STOPWORD),
+      ("stemmer_override.json", LangResourceType.STEMMER_OVERRIDE)
+  )
+
+  private[this] def loadLangSpecificResources(indexName: String, indexSuffix: String,
+                                              language: String, openCloseIndices: Boolean = false): Unit = {
+    val client: RestHighLevelClient = elasticClient.httpClient
+    val resourcesJson = langSpecificDataFiles.map { case (file, resType) =>
+      val resPath: String = accessoryFilePathTpl.format(language, file)
+      val resFileJsonIs: Option[InputStream] = Option {
+        getClass.getResourceAsStream(resPath)
+      }
+      resFileJsonIs match {
+        case Some(stream) => (Source.fromInputStream(stream, "utf-8").mkString, resType)
+        case _ => ("", resType)
+      }
+    }.filter{ case(json, _) => json != ""}
+
+    val fullIndexName: String = Index.indexName(indexName, indexSuffix)
+    resourcesJson.foreach { case(resJson, resType) =>
+      resType match {
+        case LangResourceType.STOPWORD | LangResourceType.STEMMER_OVERRIDE =>
+          if(openCloseIndices) openClose(indexName, Some(indexSuffix), "close")
+          val updateIndexSettingsReq = new UpdateSettingsRequest().indices(fullIndexName)
+            .settings(Settings.builder().loadFromSource(resJson, XContentType.JSON))
+          val updateIndexSettingsRes: AcknowledgedResponse = client.indices
+            .putSettings(updateIndexSettingsReq, RequestOptions.DEFAULT)
+          if(!updateIndexSettingsRes.isAcknowledged) {
+            val message = "Failed to apply index settings (" + resType + ") for index: " + fullIndexName
+            throw LangResourceException(message)
+          }
+          if(openCloseIndices) openClose(indexName, Some(indexSuffix), "open")
+        case _ =>
+          val message = "Bad ResourceType(" + resType + ") for index: " + fullIndexName
+          throw LangResourceException(message)
+      }
+    }
+  }
+
   def create(indexName: String,
              indexSuffix: Option[String] = None): Future[IndexManagementResponse] = Future {
     val client: RestHighLevelClient = elasticClient.httpClient
@@ -77,7 +131,7 @@ object IndexManagementService extends AbstractDataService {
         throw new FileNotFoundException(message)
     }
 
-    val operationsMessage: List[String] = schemaFiles.filter(item => {
+    val operationsMessage: List[(String, Boolean)] = schemaFiles.filter(item => {
       indexSuffix match {
         case Some(t) => t === item.indexSuffix
         case _ => true
@@ -94,7 +148,7 @@ object IndexManagementService extends AbstractDataService {
           throw new FileNotFoundException(message)
       }
 
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
 
       val createIndexReq = new CreateIndexRequest(fullIndexName).settings(
         Settings.builder().loadFromSource(analyzerJson, XContentType.JSON)
@@ -104,12 +158,15 @@ object IndexManagementService extends AbstractDataService {
 
       val createIndexRes: CreateIndexResponse = client.indices.create(createIndexReq, RequestOptions.DEFAULT)
 
-      item.indexSuffix + "(" + fullIndexName + ", " + createIndexRes.isAcknowledged.toString + ")"
+      loadLangSpecificResources(indexName, item.indexSuffix, language, true)
+
+      (item.indexSuffix + "(" + fullIndexName + ", " + createIndexRes.isAcknowledged + ")",
+        createIndexRes.isAcknowledged)
     })
 
-    val message = "IndexCreation: " + operationsMessage.mkString(" ")
+    val message = "IndexCreation: " + operationsMessage.map{case(msg, _) => msg}.mkString(" ")
 
-    IndexManagementResponse(message)
+    IndexManagementResponse(message = message, check = operationsMessage.forall{case(_, ck) => ck})
   }
 
   def remove(indexName: String,
@@ -121,55 +178,57 @@ object IndexManagementService extends AbstractDataService {
       throw IndexManagementServiceException(message)
     }
 
-    val operationsMessage: List[String] = schemaFiles.filter(item => {
+    val operationsMessage: List[(String, Boolean)] = schemaFiles.filter(item => {
       indexSuffix match {
         case Some(t) => t === item.indexSuffix
         case _ => true
       }
     }).map(item => {
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
 
       val deleteIndexReq = new DeleteIndexRequest(fullIndexName)
 
       val deleteIndexRes: AcknowledgedResponse = client.indices.delete(deleteIndexReq, RequestOptions.DEFAULT)
 
-      item.indexSuffix + "(" + fullIndexName + ", " + deleteIndexRes.isAcknowledged.toString + ")"
-
+      (item.indexSuffix + "(" + fullIndexName + ", " + deleteIndexRes.isAcknowledged + ")",
+        deleteIndexRes.isAcknowledged)
     })
 
-    val message = "IndexDeletion: " + operationsMessage.mkString(" ")
+    val message = "IndexDeletion: " + operationsMessage.map{case(msg, _) => msg}.mkString(" ")
 
-    IndexManagementResponse(message)
+    IndexManagementResponse(message = message, check = operationsMessage.forall{case(_, ck) => ck})
   }
 
   def check(indexName: String,
-            indexSuffix: Option[String] = None): Future[IndexManagementResponse] = Future {
+            indexSuffix: Option[String] = None): IndexManagementResponse = {
     val client: RestHighLevelClient = elasticClient.httpClient
 
-    val operationsMessage: List[String] = schemaFiles.filter(item => {
+    val operations: List[(String, Boolean)] = schemaFiles.filter{item =>
       indexSuffix match {
         case Some(t) => t === item.indexSuffix
         case _ => true
       }
-    }).map(item => {
-      val fullIndexName = indexName + "." + item.indexSuffix
+    }.map{item =>
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
 
       val getMappingsReq: GetMappingsRequest = new GetMappingsRequest()
         .indices(fullIndexName)
 
-      val getMappingsRes: GetMappingsResponse = client.indices.getMapping(getMappingsReq, RequestOptions.DEFAULT)
+      Try(client.indices.getMapping(getMappingsReq, RequestOptions.DEFAULT)) match {
+        case Success(mappingsRes) =>
+          val check = mappingsRes.mappings.containsKey(fullIndexName)
+          (item.indexSuffix + "(" + fullIndexName + ", " + check + ")", check)
+        case Failure(exception) => (item.indexSuffix + "(" + fullIndexName + ", false)", false)
+      }
+    }
 
-      val check = getMappingsRes.mappings.containsKey(fullIndexName)
-      item.indexSuffix + "(" + fullIndexName + ", " + check + ")"
-    })
-
-    val message = "IndexCheck: " + operationsMessage.mkString(" ")
-
-    IndexManagementResponse(message)
+    val (messages, checks) = operations.unzip
+    IndexManagementResponse(message = "IndexCheck: " + messages.mkString(" "),
+      check = operations.forall{case(_, ck) => ck})
   }
 
   def openClose(indexName: String, indexSuffix: Option[String] = None,
-                operation: String): Future[List[OpenCloseIndex]] = Future {
+                operation: String): List[OpenCloseIndex] = {
     val client: RestHighLevelClient = elasticClient.httpClient
     schemaFiles.filter(item => {
       indexSuffix match {
@@ -177,7 +236,7 @@ object IndexManagementService extends AbstractDataService {
         case _ => true
       }
     }).map(item => {
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
       operation match {
         case "close" =>
           val closeIndexReq = new CloseIndexRequest().indices(fullIndexName)
@@ -211,13 +270,13 @@ object IndexManagementService extends AbstractDataService {
         throw new FileNotFoundException(message)
     }
 
-    val operationsMessage: List[String] = schemaFiles.filter(item => {
+    val operationsMessage: List[(String, Boolean)] = schemaFiles.filter(item => {
       indexSuffix match {
         case Some(t) => t === item.indexSuffix
         case _ => true
       }
     }).map(item => {
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
 
       val updateIndexSettingsReq = new UpdateSettingsRequest().indices(fullIndexName)
         .settings(Settings.builder().loadFromSource(analyzerJson, XContentType.JSON))
@@ -225,19 +284,21 @@ object IndexManagementService extends AbstractDataService {
       val updateIndexSettingsRes: AcknowledgedResponse = client.indices
         .putSettings(updateIndexSettingsReq, RequestOptions.DEFAULT)
 
-      item.indexSuffix + "(" + fullIndexName + ", " + updateIndexSettingsRes.isAcknowledged.toString + ")"
+      loadLangSpecificResources(indexName, item.indexSuffix, language)
+
+      (item.indexSuffix + "(" + fullIndexName + ", " + updateIndexSettingsRes.isAcknowledged + ")",
+        updateIndexSettingsRes.isAcknowledged)
     })
 
-    val message = "IndexSettingsUpdate: " + operationsMessage.mkString(" ")
-
-    IndexManagementResponse(message)
+    val message = "IndexSettingsUpdate: " + operationsMessage.map{case(msg, _) => msg}.mkString(" ")
+    IndexManagementResponse(message = message, check = operationsMessage.forall{case(_, ck) => ck})
   }
 
   def updateMappings(indexName: String,
                      indexSuffix: Option[String] = None): Future[IndexManagementResponse] = Future {
     val client: RestHighLevelClient = elasticClient.httpClient
 
-    val operationsMessage: List[String] = schemaFiles.filter(item => {
+    val operationsMessage: List[(String, Boolean)] = schemaFiles.filter(item => {
       indexSuffix match {
         case Some(t) => t === item.indexSuffix
         case _ => true
@@ -254,7 +315,7 @@ object IndexManagementService extends AbstractDataService {
           throw new FileNotFoundException(message)
       }
 
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
 
       val putMappingReq = new PutMappingRequest(fullIndexName)
         .source(schemaJson, XContentType.JSON)
@@ -262,12 +323,12 @@ object IndexManagementService extends AbstractDataService {
       val putMappingRes: AcknowledgedResponse = client.indices
         .putMapping(putMappingReq, RequestOptions.DEFAULT)
 
-      item.indexSuffix + "(" + fullIndexName + ", " + putMappingRes.isAcknowledged.toString + ")"
+      (item.indexSuffix + "(" + fullIndexName + ", " + putMappingRes.isAcknowledged + ")",
+        putMappingRes.isAcknowledged)
     })
 
     val message = "IndexUpdateMappings: " + operationsMessage.mkString(" ")
-
-    IndexManagementResponse(message)
+    IndexManagementResponse(message = message, check = operationsMessage.forall{case(_, ck) => ck})
   }
 
   def refresh(indexName: String,
@@ -278,7 +339,7 @@ object IndexManagementService extends AbstractDataService {
         case _ => true
       }
     }).map(item => {
-      val fullIndexName = indexName + "." + item.indexSuffix
+      val fullIndexName = Index.indexName(indexName, item.indexSuffix)
       val refreshIndexRes: RefreshIndexResult = elasticClient.refresh(fullIndexName)
       if (refreshIndexRes.failedShardsN > 0) {
         val indexRefreshMessage = item.indexSuffix + "(" + fullIndexName + ", " +
@@ -291,7 +352,6 @@ object IndexManagementService extends AbstractDataService {
 
     RefreshIndexResults(results = operationsResults)
   }
-
 }
 
 

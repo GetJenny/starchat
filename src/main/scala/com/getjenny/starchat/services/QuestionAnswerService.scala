@@ -4,6 +4,8 @@ package com.getjenny.starchat.services
   * Created by Angelo Leto <angelo@getjenny.com> on 01/07/16.
   */
 
+import java.time.{ZoneId, ZoneOffset}
+
 import akka.event.{Logging, LoggingAdapter}
 import com.getjenny.analyzer.util.{RandomNumbers, Time}
 import com.getjenny.starchat.SCActorSystem
@@ -28,14 +30,11 @@ import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.aggregations.bucket.filter.ParsedFilter
 import org.elasticsearch.search.aggregations.bucket.histogram.{DateHistogramInterval, Histogram, ParsedDateHistogram}
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms
-import org.elasticsearch.search.aggregations.metrics.avg.Avg
-import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality
-import org.elasticsearch.search.aggregations.metrics.sum.Sum
+import org.elasticsearch.search.aggregations.metrics.{Avg, Cardinality, Sum}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.{FieldSortBuilder, ScoreSortBuilder, SortOrder}
-import org.joda.time.{DateTime, DateTimeZone}
 import scalaz.Scalaz._
-
+import java.time.ZonedDateTime
 import scala.collection.JavaConverters._
 import scala.collection.immutable.{List, Map}
 import scala.collection.mutable
@@ -63,8 +62,8 @@ trait QuestionAnswerService extends AbstractDataService {
     val questionAgg = AggregationBuilders.cardinality("question_term_count").field("question.base")
     val answerAgg = AggregationBuilders.cardinality("answer_term_count").field("answer.base")
 
-    val scriptBody = "def qnList = new ArrayList(doc[\"question.base\"].getValues()) ; " +
-      "List anList = doc[\"answer.base\"].getValues() ; qnList.addAll(anList) ; return qnList ;"
+    val scriptBody = "def qnList = new ArrayList(doc[\"question.base\"]) ; " +
+      "List anList = doc[\"answer.base\"] ; qnList.addAll(anList) ; return qnList ;"
     val script: Script = new Script(scriptBody)
     val totalAgg = AggregationBuilders.cardinality("total_term_count").script(script)
 
@@ -77,13 +76,12 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
       .requestCache(true)
 
     val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
 
-    val totalHits = searchResp.getHits.totalHits
+    val totalHits = searchResp.getHits.getTotalHits.value
 
     val questionAggRes: Cardinality = searchResp.getAggregations.get("question_term_count")
     val answerAggRes: Cardinality = searchResp.getAggregations.get("answer_term_count")
@@ -143,13 +141,12 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
       .requestCache(true)
 
     val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
 
-    val totalHits = searchResp.getHits.totalHits
+    val totalHits = searchResp.getHits.getTotalHits.value
 
     val questionAggRes: Sum = searchResp.getAggregations.get("question_term_count")
     val answerAggRes: Sum = searchResp.getAggregations.get("answer_term_count")
@@ -215,13 +212,12 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
       .requestCache(true)
 
     val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
 
-    val totalHits = searchResp.getHits.totalHits
+    val totalHits = searchResp.getHits.getTotalHits.value
 
     val aggRes: Sum = searchResp.getAggregations.get("countTerms")
 
@@ -474,6 +470,11 @@ trait QuestionAnswerService extends AbstractDataService {
       case _ => None : Option[Double]
     }
 
+    val responseScore : Option[Double] = source.get("responseScore") match {
+      case Some(t) => Option { t.asInstanceOf[Double] }
+      case _ => None : Option[Double]
+    }
+
     val start : Option[Boolean] = source.get("start") match {
       case Some(t) => Some(t.asInstanceOf[Boolean])
       case _ => Some(false)
@@ -494,6 +495,7 @@ trait QuestionAnswerService extends AbstractDataService {
         algorithmConvScore = algorithmConvScore,
         feedbackAnswerScore = feedbackAnswerScore,
         algorithmAnswerScore = algorithmAnswerScore,
+        responseScore = responseScore,
         start = start
       )
     }
@@ -510,27 +512,7 @@ trait QuestionAnswerService extends AbstractDataService {
     )
   }
 
-  def search(indexName: String, documentSearch: QADocumentSearch): Option[SearchQADocumentsResults] = {
-    val client: RestHighLevelClient = elasticClient.httpClient
-
-    val sourceReq: SearchSourceBuilder = new SearchSourceBuilder()
-      .from(documentSearch.from.getOrElse(0))
-      .size(documentSearch.size.getOrElse(10))
-      .minScore(documentSearch.minScore.getOrElse(Option{elasticClient.queryMinThreshold}.getOrElse(0.0f)))
-
-    documentSearch.sortByConvIdIdx match {
-      case Some(true) =>
-        sourceReq.sort(new FieldSortBuilder("conversation").order(SortOrder.DESC))
-          .sort(new FieldSortBuilder("index_in_conversation").order(SortOrder.DESC))
-          .sort(new FieldSortBuilder("timestamp").order(SortOrder.DESC))
-      case _ => sourceReq.sort(new ScoreSortBuilder().order(SortOrder.DESC))
-    }
-
-    val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
-      .source(sourceReq)
-      .types("_doc")
-      .searchType(SearchType.DFS_QUERY_THEN_FETCH)
-
+  private[this] def queryBuilder(documentSearch: QADocumentSearch): BoolQueryBuilder = {
     val boolQueryBuilder : BoolQueryBuilder = QueryBuilders.boolQuery()
 
     documentSearch.conversation match {
@@ -577,28 +559,29 @@ trait QuestionAnswerService extends AbstractDataService {
     }
 
     val coreDataIn = documentSearch.coreData.getOrElse(QADocumentCore())
-    val annotationsIn = documentSearch.annotations.getOrElse(QADocumentAnnotations())
+    val annotationsIn = documentSearch.annotations.getOrElse(QADocumentAnnotationsSearch())
 
     // begin core data
     coreDataIn.question match {
       case Some(questionQuery) =>
-        boolQueryBuilder.must(QueryBuilders.boolQuery()
+
+        val questionPositiveQuery: QueryBuilder = QueryBuilders.boolQuery()
           .must(QueryBuilders.matchQuery("question.stem", questionQuery))
           .should(QueryBuilders.matchPhraseQuery("question.raw", questionQuery)
             .boost(elasticClient.questionExactMatchBoost))
-        )
 
         val questionNegativeNestedQuery: QueryBuilder = QueryBuilders.nestedQuery(
           "question_negative",
           QueryBuilders.matchQuery("question_negative.query.base", questionQuery)
-            .minimumShouldMatch(elasticClient.questionNegativeMinimumMatch)
-            .boost(elasticClient.questionNegativeBoost),
+            .minimumShouldMatch(elasticClient.questionNegativeMinimumMatch),
           ScoreMode.Total
         ).ignoreUnmapped(true)
           .innerHit(new InnerHitBuilder().setSize(100))
 
         boolQueryBuilder.should(
-          questionNegativeNestedQuery
+          QueryBuilders.boostingQuery(questionPositiveQuery,
+            questionNegativeNestedQuery
+          ).negativeBoost(elasticClient.questionNegativeBoost)
         )
       case _ => ;
     }
@@ -666,7 +649,10 @@ trait QuestionAnswerService extends AbstractDataService {
     }
 
     annotationsIn.doctype match {
-      case Some(doctype) => boolQueryBuilder.filter(QueryBuilders.termQuery("doctype", doctype))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("doctype", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
@@ -676,27 +662,42 @@ trait QuestionAnswerService extends AbstractDataService {
     }
 
     annotationsIn.agent match {
-      case Some(agent) => boolQueryBuilder.filter(QueryBuilders.termQuery("agent", agent))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("agent", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
     annotationsIn.escalated match {
-      case Some(escalated) => boolQueryBuilder.filter(QueryBuilders.termQuery("escalated", escalated))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("escalated", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
     annotationsIn.answered match {
-      case Some(answered) => boolQueryBuilder.filter(QueryBuilders.termQuery("answered", answered))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("answered", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
     annotationsIn.triggered match {
-      case Some(triggered) => boolQueryBuilder.filter(QueryBuilders.termQuery("triggered", triggered))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("triggered", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
     annotationsIn.followup match {
-      case Some(followup) => boolQueryBuilder.filter(QueryBuilders.termQuery("followup", followup))
+      case Some(queryParam) =>
+        val orQuery = QueryBuilders.boolQuery()
+        queryParam.foreach(i => orQuery.should(QueryBuilders.termQuery("followup", i.toString)))
+        boolQueryBuilder.filter(orQuery)
       case _ => ;
     }
 
@@ -705,27 +706,83 @@ trait QuestionAnswerService extends AbstractDataService {
       case _ => ;
     }
 
-    annotationsIn.feedbackConvScore match {
-      case Some(feedbackConvScore) => boolQueryBuilder.filter(
-        QueryBuilders.termQuery("feedbackConvScore", feedbackConvScore))
+    annotationsIn.feedbackScoreConvGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("feedbackConvScore")
+            .gte(ts))
       case _ => ;
     }
 
-    annotationsIn.algorithmConvScore match {
-      case Some(algorithmConvScore) => boolQueryBuilder.filter(
-        QueryBuilders.termQuery("algorithmConvScore", algorithmConvScore))
+    annotationsIn.feedbackScoreConvGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("feedbackConvScore")
+            .lte(ts))
       case _ => ;
     }
 
-    annotationsIn.feedbackAnswerScore match {
-      case Some(feedbackAnswerScore) => boolQueryBuilder.filter(
-        QueryBuilders.termQuery("feedbackAnswerScore", feedbackAnswerScore))
+    annotationsIn.algorithmScoreConvGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("algorithmConvScore")
+            .gte(ts))
       case _ => ;
     }
 
-    annotationsIn.algorithmAnswerScore match {
-      case Some(algorithmAnswerScore) => boolQueryBuilder.filter(
-        QueryBuilders.termQuery("algorithmAnswerScore", algorithmAnswerScore))
+    annotationsIn.algorithmScoreConvLte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("algorithmConvScore")
+            .lte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.feedbackScoreAnswerGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("feedbackAnswerScore")
+            .gte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.feedbackScoreAnswerLte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("feedbackAnswerScore")
+            .lte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.algorithmScoreAnswerGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("algorithmAnswerScore")
+            .gte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.algorithmScoreAnswerLte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("algorithmAnswerScore")
+            .lte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.responseScoreGte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("responseScore")
+            .gte(ts))
+      case _ => ;
+    }
+
+    annotationsIn.responseScoreLte match {
+      case Some(ts) =>
+        boolQueryBuilder.filter(
+          QueryBuilders.rangeQuery("responseScore")
+            .lte(ts))
       case _ => ;
     }
 
@@ -734,6 +791,31 @@ trait QuestionAnswerService extends AbstractDataService {
       case _ => ;
     }
     // end annotations
+
+    boolQueryBuilder
+  }
+
+  def search(indexName: String, documentSearch: QADocumentSearch): Option[SearchQADocumentsResults] = {
+    val client: RestHighLevelClient = elasticClient.httpClient
+
+    val sourceReq: SearchSourceBuilder = new SearchSourceBuilder()
+      .from(documentSearch.from.getOrElse(0))
+      .size(documentSearch.size.getOrElse(10))
+      .minScore(documentSearch.minScore.getOrElse(Option{elasticClient.queryMinThreshold}.getOrElse(0.0f)))
+
+    documentSearch.sortByConvIdIdx match {
+      case Some(true) =>
+        sourceReq.sort(new FieldSortBuilder("conversation").order(SortOrder.DESC))
+          .sort(new FieldSortBuilder("index_in_conversation").order(SortOrder.DESC))
+          .sort(new FieldSortBuilder("timestamp").order(SortOrder.DESC))
+      case _ => sourceReq.sort(new ScoreSortBuilder().order(SortOrder.DESC))
+    }
+
+    val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
+      .source(sourceReq)
+      .searchType(SearchType.DFS_QUERY_THEN_FETCH)
+
+    val boolQueryBuilder : BoolQueryBuilder = queryBuilder(documentSearch)
 
     sourceReq.query(boolQueryBuilder)
 
@@ -752,10 +834,11 @@ trait QuestionAnswerService extends AbstractDataService {
       }
     }
 
-    val filteredDoc : List[SearchQADocument] = documents.getOrElse(List[SearchQADocument]())
+    val filteredDoc : List[SearchQADocument] =
+      documents.getOrElse(List.empty[SearchQADocument])
 
     val maxScore : Float = searchResp.getHits.getMaxScore
-    val totalHits = searchResp.getHits.totalHits
+    val totalHits = searchResp.getHits.getTotalHits.value
     val total : Int = filteredDoc.length
     val searchResults : SearchQADocumentsResults = SearchQADocumentsResults(totalHits = totalHits,
       hitsCount = total, maxScore = maxScore, hits = filteredDoc)
@@ -794,7 +877,6 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
       .requestCache(true)
 
@@ -825,6 +907,8 @@ trait QuestionAnswerService extends AbstractDataService {
       case _ => ;
     }
 
+    sourceReq.query(boolQueryBuilder)
+
     sourceReq.aggregation(AggregationBuilders.cardinality("totalDocuments")
       .field("_id").precisionThreshold(40000))
 
@@ -832,8 +916,8 @@ trait QuestionAnswerService extends AbstractDataService {
       .field("conversation").precisionThreshold(4000))
 
     val dateHistTimezone = request.timezone match {
-      case Some(tz) => DateTimeZone.forID(tz)
-      case _ => DateTimeZone.forID("+00:00")
+      case Some(tz) => ZoneId.ofOffset("UTC", ZoneOffset.of(tz))
+      case _ => ZoneId.ofOffset("UTC", ZoneOffset.of("+00:00"))
     }
 
     request.aggregations match {
@@ -1142,7 +1226,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1155,7 +1239,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1168,7 +1252,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1181,7 +1265,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1194,7 +1278,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1207,7 +1291,7 @@ trait QuestionAnswerService extends AbstractDataService {
           Some {
             h.getBuckets.asScala.map { bucket =>
               CountOverTimeHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount
               )
@@ -1233,7 +1317,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1248,7 +1332,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1263,7 +1347,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1278,7 +1362,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1292,7 +1376,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1306,7 +1390,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1320,7 +1404,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1334,7 +1418,7 @@ trait QuestionAnswerService extends AbstractDataService {
             h.getBuckets.asScala.map { bucket =>
               val avg: Avg = bucket.getAggregations.get("avgScore")
               AvgScoresHistogramItem(
-                key = bucket.getKey.asInstanceOf[DateTime].getMillis,
+                key = bucket.getKey.asInstanceOf[ZonedDateTime].toInstant.toEpochMilli,
                 keyAsString = bucket.getKeyAsString,
                 docCount = bucket.getDocCount,
                 avgScore = avg.getValue
@@ -1524,6 +1608,10 @@ trait QuestionAnswerService extends AbstractDataService {
           case Some(t) => builder.field("algorithmAnswerScore", t)
           case _ => ;
         }
+        annotations.responseScore match {
+          case Some(t) => builder.field("responseScore", t)
+          case _ => ;
+        }
         annotations.start match {
           case Some(t) => builder.field("start", t)
           case _ => builder.field("start", false);
@@ -1538,7 +1626,6 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val indexReq = new IndexRequest()
       .index(Index.indexName(indexName, elasticClient.indexSuffix))
-      .`type`("_doc")
       .id(document.id)
       .source(builder)
 
@@ -1560,7 +1647,7 @@ trait QuestionAnswerService extends AbstractDataService {
     Option {doc_result}
   }
 
-  def update(indexName: String, document: QADocumentUpdate, refresh: Int): UpdateDocumentsResult = {
+  private[this] def updateBuilder(document: QADocumentUpdate): XContentBuilder = {
     val builder : XContentBuilder = jsonBuilder().startObject()
 
     document.conversation match {
@@ -1654,11 +1741,31 @@ trait QuestionAnswerService extends AbstractDataService {
             builder.field("state", t)
           case _ => ;
         }
-        builder.field("agent", annotations.agent.toString)
-        builder.field("escalated", annotations.escalated.toString)
-        builder.field("answered", annotations.answered.toString)
-        builder.field("triggered", annotations.triggered.toString)
-        builder.field("followup", annotations.followup.toString)
+        annotations.agent match {
+          case Some(t) =>
+            builder.field("agent", t.toString)
+          case _ => ;
+        }
+        annotations.escalated match {
+          case Some(t) =>
+            builder.field("escalated", t.toString)
+          case _ => ;
+        }
+        annotations.answered match {
+          case Some(t) =>
+            builder.field("answered", t.toString)
+          case _ => ;
+        }
+        annotations.triggered match {
+          case Some(t) =>
+            builder.field("triggered", t.toString)
+          case _ => ;
+        }
+        annotations.followup match {
+          case Some(t) =>
+            builder.field("followup", t.toString)
+          case _ => ;
+        }
         annotations.feedbackConv match {
           case Some(t) => builder.field("feedbackConv", t)
           case _ => ;
@@ -1679,6 +1786,10 @@ trait QuestionAnswerService extends AbstractDataService {
           case Some(t) => builder.field("algorithmAnswerScore", t)
           case _ => ;
         }
+        annotations.responseScore match {
+          case Some(t) => builder.field("responseScore", t)
+          case _ => ;
+        }
         annotations.start match {
           case Some(t) => builder.field("start", t)
           case _ => ;
@@ -1688,6 +1799,11 @@ trait QuestionAnswerService extends AbstractDataService {
     // end annotations
 
     builder.endObject()
+    builder
+  }
+
+  def update(indexName: String, document: QADocumentUpdate, refresh: Int): UpdateDocumentsResult = {
+    val builder = updateBuilder(document)
 
     val client: RestHighLevelClient = elasticClient.httpClient
 
@@ -1695,10 +1811,9 @@ trait QuestionAnswerService extends AbstractDataService {
     document.id.map { id =>
       val updateReq = new UpdateRequest()
         .index(Index.indexName(indexName, elasticClient.indexSuffix))
-        .`type`("_doc")
         .doc(builder)
         .id(id)
-      bulkRequest.add(updateReq, RequestOptions.DEFAULT)
+      bulkRequest.add(updateReq)
     }
 
     val bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT)
@@ -1721,6 +1836,22 @@ trait QuestionAnswerService extends AbstractDataService {
     UpdateDocumentsResult(data = listOfDocRes)
   }
 
+  def updateByQuery(indexName: String, updateReq: UpdateQAByQueryReq, refresh: Int): UpdateDocumentsResult = {
+    val searchRes: Option[SearchQADocumentsResults] =
+      search(indexName = indexName, documentSearch = updateReq.documentSearch)
+    searchRes match {
+      case Some(r) =>
+        val id = r.hits.map(_.document.id)
+        if(id.nonEmpty) {
+          val updateDoc = updateReq.document.copy(id = id)
+          update(indexName = indexName, document = updateDoc, refresh = refresh)
+        } else {
+          UpdateDocumentsResult(data = List.empty[UpdateDocumentResult])
+        }
+      case _ => UpdateDocumentsResult(data = List.empty[UpdateDocumentResult])
+    }
+  }
+
   def read(indexName: String, ids: List[String]): Option[SearchQADocumentsResults] = {
     val client: RestHighLevelClient = elasticClient.httpClient
 
@@ -1728,7 +1859,7 @@ trait QuestionAnswerService extends AbstractDataService {
     ids.foreach{ id =>
       multigetReq.add(
         new MultiGetRequest.Item(Index
-          .indexName(indexName, elasticClient.indexSuffix), null, id)
+          .indexName(indexName, elasticClient.indexSuffix), id)
       )
     }
 
@@ -1777,7 +1908,6 @@ trait QuestionAnswerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .scroll(new TimeValue(keepAlive))
 
     var scrollResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)

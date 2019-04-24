@@ -50,7 +50,9 @@ object Index {
     * @return the full index name made of indexName and Suffix
     */
   def indexName(indexName: String, suffix: String): String = {
-    indexName + "." + suffix
+    if(suffix.nonEmpty) {
+      indexName + "." + suffix
+    } else indexName
   }
 
   /** Extract the name of the common index

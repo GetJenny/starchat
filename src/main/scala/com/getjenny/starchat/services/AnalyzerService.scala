@@ -73,7 +73,6 @@ object AnalyzerService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .scroll(new TimeValue(60000))
 
     var scrollResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
@@ -161,6 +160,7 @@ object AnalyzerService extends AbstractDataService {
       val analyzerDeclaration = runtimeItem.analyzer.declaration
       val queriesTerms = runtimeItem.queries
       val version: Long = runtimeItem.version
+      val evaluationClass: String = runtimeItem.evaluationClass
       val buildAnalyzerResult: BuildAnalyzerResult =
         if (analyzerDeclaration =/= "") {
           val restrictedArgs: Map[String, String] = Map("index_name" -> indexName)
@@ -205,7 +205,9 @@ object AnalyzerService extends AbstractDataService {
             message = buildAnalyzerResult.message
           ),
         version = version,
-        queries = queriesTerms)
+        queries = queriesTerms,
+        evaluationClass = evaluationClass
+      )
       (stateId, decisionTableRuntimeItem)
     }.filter{case (_, decisionTableRuntimeItem) => decisionTableRuntimeItem.analyzer.build}
     result

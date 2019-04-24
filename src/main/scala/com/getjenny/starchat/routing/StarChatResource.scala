@@ -32,8 +32,12 @@ trait StarChatResource extends Directives with JsonSupport {
   protected[this] val indexRegex: Regex = Index.indexMatchRegexDelimited
   protected[this] val orgNameRegex: Regex = Index.orgNameMatchRegexDelimited
 
-  protected[this] def tempDestination(fileInfo: FileInfo): File =
-    File.createTempFile("uploadedFile", ".csv")
+  protected[this] def tempDestination(suffix: String)(fileInfo: FileInfo): File = {
+    val file = File.createTempFile("uploadedFile_", suffix)
+    log.info("Uploaded file(" + file.getAbsolutePath + ") contentType(" + fileInfo.contentType +
+      ") fieldName(" + fileInfo.fieldName + ")")
+    file
+  }
 
   protected[this] val routesExceptionHandler = ExceptionHandler {
     case e: IndexNotFoundException =>

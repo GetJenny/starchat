@@ -262,21 +262,35 @@ object DecisionTableService extends AbstractDataService {
     val searchAlgorithm = documentSearch.searchAlgorithm.getOrElse(SearchAlgorithm.DEFAULT)
     searchAlgorithm match {
       case SearchAlgorithm.AUTO | SearchAlgorithm.DEFAULT =>
-        val esAnalyzerName = if(documentSearch.queries.getOrElse("").length <= 6) {
-          "queries.query.shingles_2"
+        val (scriptBody, matchQueryEs, analyzer, algorithm) = if(documentSearch.queries.getOrElse("").length > 3) {
+          (
+            "return doc['queries.query.ngram_3'] ;",
+            "queries.query.ngram_3",
+            "ngram3",
+            SearchAlgorithm.NGRAM3
+
+          )
         } else {
-          "queries.query.shingles_3"
+          (
+            "return doc['queries.query.ngram_2'] ;",
+            "queries.query.ngram_2",
+            "ngram2",
+            SearchAlgorithm.NGRAM2
+          )
         }
+
+        val modDocumentSearch = documentSearch.copy(
+          searchAlgorithm = Some(algorithm)
+        )
+        val script: Script = new Script(scriptBody)
         (QueryBuilders.nestedQuery(
           "queries",
           QueryBuilders.boolQuery()
-            .must(QueryBuilders.matchQuery(esAnalyzerName, value))
-            .should(QueryBuilders.matchPhraseQuery("queries.query.raw", value)
-            .boost(1 + (minScore * boostExactMatchFactor))
-          ),
+            .must(QueryBuilders.matchQuery(matchQueryEs, value)),
           queriesScoreMode.getOrElse(elasticClient.queriesScoreMode, ScoreMode.Max)
-        ).ignoreUnmapped(true).innerHit(new InnerHitBuilder().setSize(100)),
-          responseToDtDocumentDefault)
+        ).ignoreUnmapped(true)
+          .innerHit(new InnerHitBuilder().addScriptField("terms", script).setSize(100)),
+          responseToDtDocumentNGrams(indexName, analyzer, modDocumentSearch))
       case SearchAlgorithm.STEM_BOOST_EXACT =>
         (
           QueryBuilders.nestedQuery(
@@ -415,7 +429,6 @@ object DecisionTableService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
 
     val minScore = documentSearch.minScore.getOrElse(
@@ -549,7 +562,6 @@ object DecisionTableService extends AbstractDataService {
 
     val indexReq = new IndexRequest()
       .index(Index.indexName(indexName, elasticClient.indexSuffix))
-      .`type`("_doc")
       .id(document.state)
       .source(builder)
 
@@ -642,7 +654,6 @@ object DecisionTableService extends AbstractDataService {
 
     val updateReq = new UpdateRequest()
       .index(Index.indexName(indexName, elasticClient.indexSuffix))
-      .`type`("_doc")
       .doc(builder)
       .id(document.state)
 
@@ -674,7 +685,6 @@ object DecisionTableService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .scroll(new TimeValue(60000))
 
     var scrollResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
@@ -769,7 +779,7 @@ object DecisionTableService extends AbstractDataService {
     // a list of specific ids was requested
     ids.foreach{id =>
       multiGetReq.add(
-        new MultiGetRequest.Item(Index.indexName(indexName, elasticClient.indexSuffix), null, id)
+        new MultiGetRequest.Item(Index.indexName(indexName, elasticClient.indexSuffix), id)
       )
     }
 

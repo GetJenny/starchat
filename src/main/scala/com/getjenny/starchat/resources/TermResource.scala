@@ -13,6 +13,7 @@ import com.getjenny.starchat.entities._
 import com.getjenny.starchat.routing._
 import com.getjenny.starchat.services.TermService
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -125,7 +126,7 @@ trait TermResource extends StarChatResource {
                   authenticator = authenticator.authenticator) { user =>
                   authorizeAsync(_ =>
                     authenticator.hasPermissions(user, indexName, Permissions.write)) {
-                    storeUploadedFile("csv", tempDestination) {
+                    storeUploadedFile("csv", tempDestination(".csv")) {
                       case (_, file) =>
                         val breaker: CircuitBreaker =
                           StarChatCircuitBreaker.getCircuitBreaker(maxFailure = 5,
@@ -185,7 +186,9 @@ trait TermResource extends StarChatResource {
                     entity(as[DocsIds]) { requestData =>
                       if (requestData.ids.nonEmpty) {
                         val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
-                        onCompleteWithBreaker(breaker)(termService.delete(indexName, requestData.ids, refresh)) {
+                        onCompleteWithBreaker(breaker)(
+                          Future { termService.delete(indexName, requestData.ids, refresh) }
+                        ) {
                           case Success(t) =>
                             completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
                           case Failure(e) =>
@@ -197,7 +200,9 @@ trait TermResource extends StarChatResource {
                         }
                       } else {
                         val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
-                        onCompleteWithBreaker(breaker)(termService.deleteAll(indexName)) {
+                        onCompleteWithBreaker(breaker)(
+                          Future { termService.deleteAll(indexName) }
+                        ) {
                           case Success(t) =>
                             completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
                           case Failure(e) =>

@@ -67,7 +67,6 @@ class UserEsService extends AbstractUserService {
     val indexReq = new IndexRequest()
       .index(indexName)
       .create(true)
-      .`type`("_doc")
       .id(user.id)
       .source(builder)
 
@@ -124,7 +123,6 @@ class UserEsService extends AbstractUserService {
 
     val updateReq = new UpdateRequest()
       .index(indexName)
-      .`type`("_doc")
       .doc(builder)
       .id(user.id)
 
@@ -154,7 +152,6 @@ class UserEsService extends AbstractUserService {
 
     val deleteReq = new DeleteRequest()
       .index(indexName)
-      .`type`("_doc")
       .id(user.id)
 
     val response: DeleteResponse = client.delete(deleteReq, RequestOptions.DEFAULT)
@@ -182,7 +179,6 @@ class UserEsService extends AbstractUserService {
 
       val getReq = new GetRequest()
         .index(indexName)
-        .`type`("_doc")
         .id(user.id)
 
       val response: GetResponse = client.get(getReq, RequestOptions.DEFAULT)

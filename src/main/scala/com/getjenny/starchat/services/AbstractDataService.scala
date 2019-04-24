@@ -28,7 +28,7 @@ trait AbstractDataService {
     * @param indexName index name
     * @return a DeleteDocumentsResult with the status of the delete operation
     */
-  def deleteAll(indexName: String): Future[DeleteDocumentsSummaryResult] = Future {
+  def deleteAll(indexName: String): DeleteDocumentsSummaryResult = {
     val client: RestHighLevelClient = elasticClient.httpClient
 
     val request: DeleteByQueryRequest =
@@ -48,7 +48,7 @@ trait AbstractDataService {
     * @param refresh whether to call an index update on ElasticSearch or not
     * @return DeleteDocumentListResult with the result of term delete operations
     */
-  def delete(indexName: String, ids: List[String], refresh: Int): Future[DeleteDocumentsResult] = Future {
+  def delete(indexName: String, ids: List[String], refresh: Int): DeleteDocumentsResult = {
     val client: RestHighLevelClient = elasticClient.httpClient
 
     val bulkReq : BulkRequest = new BulkRequest()
@@ -56,7 +56,6 @@ trait AbstractDataService {
     ids.foreach( id => {
       val deleteReq = new DeleteRequest()
         .index(Index.indexName(indexName, elasticClient.indexSuffix))
-        .`type`("_doc")
         .id(id)
       bulkReq.add(deleteReq)
     })

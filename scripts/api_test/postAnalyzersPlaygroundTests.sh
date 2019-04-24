@@ -36,6 +36,22 @@ curl -H "Authorization: Basic $(echo -n 'admin:adminp4ssw0rd' | base64)" \
 RES=$?
 [[ ${RES} -gt 0 ]] && echo "error" && exit 1
 
+#extract email
+DATA="{\"traversedStates\": [\"one\"], \"extractedVariables\":{}}"
+ANALYZER=$(echo 'band(prevTravStateIs("one"),binarize(keyword("email")),matchPatternRegex("[email](?:([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+))"))' | jq --slurp --raw-input)
+QUERY="my email: is this.is.test@email.com"
+curl -H "Authorization: Basic $(echo -n 'admin:adminp4ssw0rd' | base64)" \
+  -H "Content-Type: application/json" -X POST "http://localhost:${PORT}/${INDEX_NAME}/analyzer/playground" -d "
+{
+        \"analyzer\": ${ANALYZER},
+        \"query\": \"${QUERY}\",
+        \"data\": ${DATA},
+        \"searchAlgorithm\": \"${ALGORITHM}\"
+}
+" | json_pp
+RES=$?
+[[ ${RES} -gt 0 ]] && echo "error" && exit 1
+
 # matchDateDDMMYYYY
 DATA="{\"traversedStates\": [], \"extractedVariables\":{}}"
 ANALYZER="matchDateDDMMYYYY(\\\"pattern_for_variables_\\\")"

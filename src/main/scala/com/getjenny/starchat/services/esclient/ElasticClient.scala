@@ -28,9 +28,9 @@ trait ElasticClient {
   val numberOfShards: Int = config.getInt("es.number_of_shards")
   val numberOfReplicas: Int = config.getInt("es.number_of_replicas")
 
-  val hostProto : String = config.getString("es.host_proto")
-  val hostMapStr : String = config.getString("es.host_map")
-  val hostMap : Map[String, Int] = hostMapStr.split(";")
+  val hostProto: String = config.getString("es.host_proto")
+  val hostMapStr: String = config.getString("es.host_map")
+  val hostMap: Map[String, Int] = hostMapStr.split(";")
     .map(x => x.split("=")).map(x => (x(0), x(1).toInt)).toMap
 
   val keystore: String = config.getString("starchat.client.https.keystore")
@@ -39,7 +39,7 @@ trait ElasticClient {
   val disableHostValidation: Boolean = config.getBoolean("starchat.client.https.disable_host_validation")
 
   val inetAddresses: List[HttpHost] =
-    hostMap.map{ case(k,v) => new HttpHost(InetAddress.getByName(k), v, hostProto) }.toList
+    hostMap.map { case (k, v) => new HttpHost(InetAddress.getByName(k), v, hostProto) }.toList
 
 
   object AllHostsValid extends HostnameVerifier {
@@ -49,20 +49,20 @@ trait ElasticClient {
   object HttpClientConfigCallback extends RestClientBuilder.HttpClientConfigCallback {
     override def customizeHttpClient(httpClientBuilder: HttpAsyncClientBuilder): HttpAsyncClientBuilder = {
       val httpBuilder = httpClientBuilder.setSSLContext(sslContext)
-      if(disableHostValidation)
+      if (disableHostValidation)
         httpBuilder.setSSLHostnameVerifier(AllHostsValid)
       httpBuilder
     }
   }
 
   def sslContext: SSLContext = {
-    val password = if(keystorePassword.nonEmpty)
+    val password = if (keystorePassword.nonEmpty)
       keystorePassword.toCharArray
     else null
 
     val ks = KeyStore.getInstance(keystoreType)
 
-    val keystoreIs: InputStream = if(keystore.startsWith("/tls/certs/")) {
+    val keystoreIs: InputStream = if (keystore.startsWith("/tls/certs/")) {
       getClass.getResourceAsStream(keystore)
     } else {
       new FileInputStream(keystore)
@@ -83,15 +83,15 @@ trait ElasticClient {
   }
 
   def buildClient(hostProto: String): RestClientBuilder = {
-    if(hostProto === "http") {
-      RestClient.builder(inetAddresses:_*)
+    if (hostProto === "http") {
+      RestClient.builder(inetAddresses: _*)
     } else {
-      RestClient.builder(inetAddresses:_*)
+      RestClient.builder(inetAddresses: _*)
         .setHttpClientConfigCallback(HttpClientConfigCallback)
     }
   }
 
-  private[this] var esHttpClient : RestHighLevelClient = openHttp()
+  private[this] var esHttpClient: RestHighLevelClient = openHttp()
 
   def openHttp(): RestHighLevelClient = {
     val client: RestHighLevelClient = new RestHighLevelClient(
@@ -128,10 +128,6 @@ trait ElasticClient {
     this.esHttpClient
   }
 
-  def sqlClient: RestHighLevelClient = {
-    this.esHttpClient
-  }
-
   def existsIndices(indices: List[String]): Boolean = {
     val request = new GetIndexRequest(indices:_*)
     request.local(false)
@@ -154,7 +150,6 @@ trait ElasticClient {
   val dtIndexSuffix: String = config.getString("es.dt_index_suffix")
   val kbIndexSuffix: String = config.getString("es.kb_index_suffix")
   val priorDataIndexSuffix: String = config.getString("es.prior_data_index_suffix")
-  val sysRefreshDtIndexSuffix: String = config.getString("es.system_refresh_dt_index_suffix")
   val systemRefreshDtIndexSuffix: String = config.getString("es.system_refresh_dt_index_suffix")
 
   val systemClusterNodesIndexSuffix: String = "cluster_nodes"

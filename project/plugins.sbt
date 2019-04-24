@@ -1,6 +1,6 @@
 resolvers += Classpaths.typesafeReleases
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.3")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.20")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.4.0")
 
@@ -12,4 +12,4 @@ addSbtPlugin("com.tapad" % "sbt-docker-compose" % "1.0.30")
 
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
 
-addSbtPlugin("com.codacy" % "sbt-codacy-coverage" % "1.3.11")
+addSbtPlugin("com.codacy" % "sbt-codacy-coverage" % "2.112")

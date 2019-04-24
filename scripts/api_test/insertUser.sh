@@ -11,6 +11,8 @@ curl -v -H "Authorization: Basic $(echo -n 'admin:adminp4ssw0rd' | base64)" \
 		"index_getjenny_english_0": ["read", "write", "stream"],
 		"index_getjenny_english_1": ["read", "write", "stream"],
 		"index_getjenny_english_2": ["read", "write", "stream"],
+		"index_getjenny_english_3": ["read", "write", "stream"],
+		"index_getjenny_english_4": ["read", "write", "stream"],
 		"index_getjenny_english_common_0": ["read", "stream"]
 	}
 }'

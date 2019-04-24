@@ -926,7 +926,7 @@ paths:
             type: string
         - in: query
           name: refresh
-          description: when set to 1 StarChat force an index refresh
+          description: when set to 1 StarChat force an index refresh (default is 1)
           required: false
           schema:
             type: number
@@ -2207,7 +2207,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/QADocumentUpdate'
-        description: QA entry to create
+        description: QA entry with new fields
   '/<index_name>/<qa_route>/search':
     post:
       tags:
@@ -2293,6 +2293,46 @@ paths:
             schema:
               $ref: '#/components/schemas/DocsIds'
         description: The list of conversation IDs
+    put:
+      tags:
+        - customer
+      summary: update by query documents in the QA table
+      operationId: put_qa_byquery_route
+      description: update by query documents in the QA table. The index must exists and the customer has write permissions on it.
+      parameters:
+        - in: path
+          name: index_name
+          description: name of the index
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: qa_route
+          description: question anser route
+          required: true
+          schema:
+            type: string
+            enum:
+              - conversation_logs
+              - knowledgebase
+              - prior_data
+      responses:
+        '200':
+          description: item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateDocumentsResult'
+        '400':
+          description: 'invalid input, object invalid, bad request'
+        '401':
+          description: authorization denied or authentication failed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQAByQueryReq'
+        description: QA entry with new fields, the id field must be an empty list
   '/<index_name>/updateTerms/<qa_route>':
     put:
       tags:
@@ -2566,6 +2606,10 @@ components:
           type: string
           description: a response message for the index management operations
           example: message from the index
+        check:
+          type: boolean
+          description: check value
+          example: true
     FailedShards:
       type: object
       properties:
@@ -4525,47 +4569,29 @@ components:
           example: I remember my password
         questionScoredTerms:
           type: array
-          description: question's terms list with score
+          description: question's terms list with score (tuples)
           items:
-            type: object
-            properties:
-              term:
-                type: string
-                description: term
-              score:
-                type: number
-                format: double
-                description: term score
-            example: {"term": "password", "score": 0.2121}
+            type: array
+            example: ["password", 0.2121]
         answer:
           type: string
           description: usually what the operator of the chat says
           example: I can reset the password for you
         answerScoredTerms:
           type: array
-          description: answer's terms list with score
+          description: answer's terms list with score (tuples)
           items:
-            type: object
-            properties:
-              term:
-                type: string
-                description: term
-              score:
-                type: number
-                format: double
-                description: term score
-            example: {"term": "reset", "score": 0.2121}
+            type: array
+            example: ["reset", 0.2121]
         verified:
           type: boolean
           description: whether the conversation was verified by an operator or not
           default: false
           example: true
         topics:
-          type: array
+          type: string
           description: list of topics
-          items:
-            type: string
-          example: ['password', "reset"]
+          example: "password reset"
         done:
           type: boolean
           description: the conversation has marked as done, this field is expected to set for each item of the conversation
@@ -4654,6 +4680,11 @@ components:
               0.0 must be chosen)
           example: 2.0
           default: 0.0
+        responseScore:
+          type: number
+          format: double
+          description: score of the response e.g. Starchat response score
+          example: 0.3
         start:
           type: boolean
           description: event determined when a start state is loaded
@@ -4677,10 +4708,11 @@ components:
           description: search for documents associated to a state
           example: "check_policy_expiration"
         agent:
-          type: string
-          default: UNSPECIFIED
-          example: HUMAN_PICKED
-          $ref: '#/components/schemas/Agent'
+          type: array
+          descripton: values to match (search documents with at least one value)
+          items:
+            $ref: '#/components/schemas/Agent'
+          example: ["HUMAN_PICKED"]
         escalated:
           type: array
           description: values to match (search documents with at least one value)
@@ -4714,8 +4746,6 @@ components:
           format: double
           description: >-
             min score value, if not specified -> no lower bound (conversation).
-            Since the documents without a feedback will have a score equal to 0.0, so use
-            a value greater than 0.0 to filter only the documents with a feedback.
           example: 1.0
         feedbackScoreConvLte:
           type: number
@@ -4727,8 +4757,6 @@ components:
           format: double
           description: >-
             min score value, if not specified -> no lower bound (conversation)
-            Since the documents without a feedback will have a score equal to 0.0, so use
-            a value greater than 0.0 to filter only the documents with a feedback.
           example: 4.0
         algorithmScoreConvLte:
           type: number
@@ -4740,16 +4768,12 @@ components:
           format: double
           description: >-
             min score value, if not specified -> no lower bound (answer)
-            Since the documents without a feedback will have a score equal to 0.0, so use
-            a value greater than 0.0 to filter only the documents with a feedback.
           example: 1.0
         feedbackScoreAnswerLte:
           type: number
           format: double
           description: >-
             max score value, if not specified -> no upper bound (answer)
-            Since the documents without a feedback will have a score equal to 0.0, so use
-            a value greater than 0.0 to filter only the documents with a feedback.
           example: 5.0
         algorithmScoreAnswerGte:
           type: number
@@ -4761,9 +4785,18 @@ components:
           format: double
           description: >-
             max score value, if not specified -> no upper bound (answer)
-            Since the documents without a feedback will have a score equal to 0.0, so use
-            a value greater than 0.0 to filter only the documents with a feedback.
           example: 5.0
+        responseScoreGte:
+          type: number
+          format: double
+          description: min StarChat score value, if not specified -> no lower bound (answer)
+          example: 0.8
+        responseScoreLte:
+          type: number
+          format: double
+          description: >-
+            max StarChat score value, if not specified -> no upper bound (answer)
+          example: 0.9
         start:
           type: boolean
           description: event determined when a start state is loaded
@@ -4819,7 +4852,7 @@ components:
         indexInConversation:
           type: number
           format: integer
-          description: the index of the document in the conversation flow
+          description: the index of the document in the conversation flow (Start from 1, 0 is reserved)
           example: 10
         coreData:
           type: object
@@ -4855,7 +4888,7 @@ components:
         indexInConversation:
           type: number
           format: integer
-          description: the index of the document in the conversation flow
+          description: the index of the document in the conversation flow (Start from 1, 0 is reserved)
           example: 10
         coreData:
           type: object
@@ -4874,6 +4907,16 @@ components:
           format: long
           description: record insertion timestamp
           example: 1549283768918
+    UpdateQAByQueryReq:
+      type: object
+      required:
+        - documentSearch
+        - document
+      properties:
+        documentSearch:
+          $ref: '#/components/schemas/QADocumentSearch'
+        document:
+          $ref: '#/components/schemas/QADocumentUpdate'
     SearchQADocument:
       type: object
       required:

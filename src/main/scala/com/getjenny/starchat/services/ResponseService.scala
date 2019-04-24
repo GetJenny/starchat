@@ -139,9 +139,8 @@ object ResponseService extends AbstractDataService {
         }.take(maxResults).toMap
 
       if(analyzersEvalData.isEmpty) {
-        throw
-          ResponseServiceNoResponseException(
-            "The analyzers evaluation list is empty, threshold could be too high")
+        throw ResponseServiceNoResponseException(
+          "The analyzers evaluation list is empty, threshold could be too high")
       }
 
       decisionTableService.read(indexName, analyzersEvalData.keys.toList).map { docResults =>
@@ -192,6 +191,12 @@ object ResponseService extends AbstractDataService {
             score = evaluationRes.score)
           responseItem
         }.toList.sortWith(_.score > _.score)
+
+        if(dtDocumentsList.isEmpty) {
+          throw ResponseServiceNoResponseException(
+            "The analyzers evaluation list is empty, it is possible that no states were found for the evaluationClass")
+        }
+
         ResponseRequestOutOperationResult(ReturnMessageData(200, ""),
           Option {dtDocumentsList})
       }

@@ -1,0 +1,223 @@
+{
+  "index.queries.cache.enabled": true,
+  "index.requests.cache.enable": true,
+  "similarity": {
+    "scripted_term_freq": {
+      "type": "scripted",
+      "script": {
+        "source": "return doc.freq ;"
+      }
+    }
+  },
+  "analysis":
+  {
+    "tokenizer": {
+      "space_punctuation": {
+        "type": "pattern",
+        "pattern": "[ |.,!?:;()\\[\\]\\{\\}]"
+      },
+      "ngram_2_tokenizer": {
+        "type": "ngram",
+        "min_gram": 2,
+        "max_gram": 2,
+        "token_chars": [
+          "letter",
+          "digit",
+          "whitespace"
+        ]
+      },
+      "ngram_3_tokenizer": {
+        "type": "ngram",
+        "min_gram": 3,
+        "max_gram": 3,
+        "token_chars": [
+          "letter",
+          "digit",
+          "whitespace"
+        ]
+      },
+      "ngram_4_tokenizer": {
+        "type": "ngram",
+        "min_gram": 4,
+        "max_gram": 4,
+        "token_chars": [
+          "letter",
+          "digit",
+          "whitespace"
+        ]
+      }
+    },
+    "char_filter":
+    {
+      "&_to_and": {
+        "type": "mapping",
+        "mappings": [ "&=> and "]
+      },
+      "whitespace_to_null": {
+        "type": "pattern_replace",
+        "pattern": "(\\s)",
+        "replacement": ""
+      }
+    },
+    "filter":
+    {
+      "jenny_estonian_stopwords":
+      {
+        "type": "stop",
+        "stopwords": "_none_"
+      },
+      "estonian_stemmer": {
+        "type": "stemmer_override",
+        "rules": []
+      },
+      "jenny_estonian_shingle_2":
+      {
+        "type":	"shingle",
+        "min_shingle_size": 2,
+        "max_shingle_size": 2,
+        "output_unigrams": true
+      },
+      "jenny_estonian_shingle_3":
+      {
+        "type":	"shingle",
+        "min_shingle_size": 3,
+        "max_shingle_size": 3,
+        "output_unigrams": true
+      },
+      "jenny_estonian_shingle_4":
+      {
+        "type":	"shingle",
+        "min_shingle_size": 4,
+        "max_shingle_size": 4,
+        "output_unigrams": true
+      }
+    },
+    "analyzer":
+    {
+      "jenny_raw_nolc_analyzer":
+      {
+        "tokenizer":    "keyword"
+      },
+      "jenny_space_punctuation_nolc_analyzer":
+      {
+        "tokenizer":    "space_punctuation"
+      },
+      "jenny_base_nolc_analyzer":
+      {
+        "tokenizer":    "standard"
+      },
+      "jenny_raw_analyzer":
+      {
+        "tokenizer":    "keyword",
+        "filter":       [ "lowercase" ]
+      },
+      "jenny_space_punctuation_analyzer":
+      {
+        "tokenizer":    "space_punctuation",
+        "filter":       [ "lowercase" ],
+        "char_filter":  [ "&_to_and" ]
+      },
+      "jenny_base_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "&_to_and" ],
+        "filter":       [ "lowercase"]
+      },
+      "jenny_stop_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "&_to_and" ],
+        "filter":       [ "lowercase", "jenny_estonian_stopwords"]
+      },
+      "jenny_base_stem_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "&_to_and" ],
+        "filter":       [ "lowercase", "estonian_stemmer"]
+      },
+      "jenny_stem_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "&_to_and" ],
+        "filter":       [ "lowercase", "jenny_estonian_stopwords", "estonian_stemmer"]
+      },
+      "jenny_shingles_2_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "jenny_estonian_shingle_2"]
+      },
+      "jenny_stemmed_shingles_2_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "estonian_stemmer", "jenny_estonian_shingle_2"]
+      },
+      "jenny_shingles_3_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "jenny_estonian_shingle_3"]
+      },
+      "jenny_stemmed_shingles_3_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "estonian_stemmer", "jenny_estonian_shingle_3"]
+      },
+      "jenny_shingles_4_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "jenny_estonian_shingle_4"]
+      },
+      "jenny_stemmed_shingles_4_analyzer":
+      {
+        "tokenizer":    "standard",
+        "char_filter":  [ "html_strip", "&_to_and" ],
+        "filter":       [ "lowercase", "estonian_stemmer", "jenny_estonian_shingle_4"]
+      },
+      "jenny_stemmed_ngram_2_analyzer":
+      {
+        "tokenizer": "ngram_2_tokenizer",
+        "filter": [ "lowercase", "estonian_stemmer"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_ngram_2_analyzer":
+      {
+        "tokenizer": "ngram_2_tokenizer",
+        "filter": [ "lowercase"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_stemmed_ngram_3_analyzer":
+      {
+        "tokenizer": "ngram_3_tokenizer",
+        "filter": [ "lowercase", "estonian_stemmer"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_ngram_3_analyzer":
+      {
+        "tokenizer": "ngram_3_tokenizer",
+        "filter": [ "lowercase"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_stemmed_ngram_4_analyzer":
+      {
+        "tokenizer": "ngram_4_tokenizer",
+        "filter": [ "lowercase", "estonian_stemmer"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_ngram_4_analyzer":
+      {
+        "tokenizer": "ngram_4_tokenizer",
+        "filter": [ "lowercase"],
+        "char_filter":  [ "whitespace_to_null" ]
+      },
+      "jenny_delimited_double": {
+        "tokenizer":"whitespace",
+        "encoding": "double",
+        "filter": "delimited_payload"
+      }
+    }
+  }
+}

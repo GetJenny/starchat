@@ -86,7 +86,8 @@ object IndexDecisionTableJSON extends JsonSupport {
         actionInput = entry.actionInput,
         stateData = entry.stateData,
         successValue = entry.successValue,
-        failureValue = entry.failureValue
+        failureValue = entry.failureValue,
+        evaluationClass = entry.evaluationClass
       )
 
       val entity_future = Marshal(state).to[MessageEntity]

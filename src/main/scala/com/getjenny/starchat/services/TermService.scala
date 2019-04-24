@@ -234,7 +234,6 @@ object TermService extends AbstractDataService {
       builder.endObject()
 
       val indexTermReq = new IndexRequest(Index.indexName(indexName, elasticClient.indexSuffix))
-        .`type`("_doc")
         .id(term.term)
         .source(builder)
 
@@ -264,7 +263,7 @@ object TermService extends AbstractDataService {
       val multiGetReq = new MultiGetRequest()
 
       termsRequest.ids.foreach{id => multiGetReq.add(
-        new MultiGetRequest.Item(Index.indexName(indexName, elasticClient.indexSuffix),null, id))
+        new MultiGetRequest.Item(Index.indexName(indexName, elasticClient.indexSuffix), id))
       }
 
       val response: MultiGetResponse = client.mget(multiGetReq, RequestOptions.DEFAULT)
@@ -432,7 +431,6 @@ object TermService extends AbstractDataService {
 
       val updateTermReq = new UpdateRequest()
         .index(Index.indexName(indexName, elasticClient.indexSuffix))
-        .`type`("_doc")
         .docAsUpsert(true)
         .id(term.term)
         .doc(builder)
@@ -509,7 +507,6 @@ object TermService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .searchType(SearchType.DFS_QUERY_THEN_FETCH)
 
     val boolQueryBuilder: BoolQueryBuilder = QueryBuilders.boolQuery()
@@ -725,7 +722,6 @@ object TermService extends AbstractDataService {
 
     val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
       .source(sourceReq)
-      .types("_doc")
       .scroll(new TimeValue(keepAlive))
 
     var scrollResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)

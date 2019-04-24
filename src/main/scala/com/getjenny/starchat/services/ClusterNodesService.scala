@@ -47,7 +47,6 @@ object ClusterNodesService extends AbstractDataService {
 
     val updateReq = new UpdateRequest()
       .index(indexName)
-      .`type`("_doc")
       .doc(builder)
       .id(uuid)
       .docAsUpsert(true)
@@ -71,7 +70,6 @@ object ClusterNodesService extends AbstractDataService {
     val currTimestamp: Long = System.currentTimeMillis
 
     val getReq = new GetRequest()
-      .`type`("_doc")
       .index(indexName)
       .id(uuid)
 
@@ -127,7 +125,6 @@ object ClusterNodesService extends AbstractDataService {
 
     val searchReq = new SearchRequest(indexName)
       .source(sourceReq)
-      .types("_doc")
       .scroll(new TimeValue(60000))
 
     val scrollResp : SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)

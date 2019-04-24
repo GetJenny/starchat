@@ -111,7 +111,7 @@ case class QADocumentCore(
 case class QADocumentAnnotations(
                                   dclass: Option[String] = None, /* document classes e.g. group0 group1 etc.*/
                                   doctype: Option[Doctypes.Value] = None, /* document type */
-                                  state: Option[String] = None, /* eventual link to any of the state machine states */
+                                  state: Option[String] = None, /* eventual link to any of the state machine states or starchat state for logs */
                                   agent: Option[Agent.Value] = None,
                                   escalated: Option[Escalated.Value] = None,
                                   answered: Option[Answered.Value] = None,
@@ -124,7 +124,8 @@ analysis tool (for future use) */
                                   feedbackAnswerScore: Option[Double] = None, /* description: a field to store the score provided by the user for the answer */
                                   algorithmAnswerScore: Option[Double] = None, /* a field to store the score calculated by an algorithm related to the answer i.e. a sentiment
 analysis tool (for future use) */
-                                  start: Option[Boolean] = None, /* event determined when a start state is loaded */
+                                  responseScore: Option[Double] = None, /* score of the response e.g. Starchat response score */
+                                  start: Option[Boolean] = None /* event determined when a start state is loaded */
                                 )
 
 case class QADocument(id: String, /* unique id of the document */
