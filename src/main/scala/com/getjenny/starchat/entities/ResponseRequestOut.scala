@@ -18,5 +18,6 @@ case class ResponseRequestOut(conversationId: String,
                               stateData: Map[String, String],
                               successValue: String,
                               failureValue: String,
-                              score: Double
+                              score: Double,
+                              actionResult: Option[DtActionResult] = None
                              )

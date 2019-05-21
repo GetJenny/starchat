@@ -8,8 +8,8 @@ import com.getjenny.analyzer.analyzers._
 import com.getjenny.analyzer.operators._
 import com.getjenny.starchat.analyzer.atoms._
 
-class StarChatAnalyzer(command_string: String, restricted_args: Map[String, String])
+class StarChatAnalyzer(command: String, restrictedArgs: Map[String, String])
   extends {
     override val atomicFactory = new StarchatFactoryAtomic
     override val operatorFactory = new DefaultFactoryOperator
-  } with DefaultParser(command_string: String, restricted_args: Map[String, String])
+  } with DefaultParser(command: String, restrictedArgs: Map[String, String])

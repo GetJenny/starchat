@@ -4,14 +4,11 @@ package com.getjenny.starchat
   * Created by Angelo Leto <angelo@getjenny.com> on 27/06/16.
   */
 
-import java.io.InputStream
-import java.security.{KeyStore, SecureRandom}
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
-import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
+import com.getjenny.starchat.utils.SslContext
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -21,12 +18,11 @@ case class Parameters(
                        http_port: Int,
                        https_enable: Boolean,
                        https_host: String,
-                       https_port: Int,
-                       https_certificate: String,
-                       https_cert_pass: String)
+                       https_port: Int)
+
+
 
 final class StarChatService(parameters: Option[Parameters] = None) extends RestInterface {
-
   val params: Parameters = parameters match {
     case Some(p) => p
     case _ =>
@@ -36,12 +32,9 @@ final class StarChatService(parameters: Option[Parameters] = None) extends RestI
         http_port = config.getInt("starchat.http.port"),
         https_enable = config.getBoolean("starchat.https.enable"),
         https_host = config.getString("starchat.https.host"),
-        https_port = config.getInt("starchat.https.port"),
-        https_certificate = config.getString("starchat.https.certificate"),
-        https_cert_pass = config.getString("starchat.https.password")
+        https_port = config.getInt("starchat.https.port")
       )
   }
-
 
   /* creation of the akka actor system which handle concurrent requests */
   implicit val system: ActorSystem = SCActorSystem.system
@@ -50,23 +43,19 @@ final class StarChatService(parameters: Option[Parameters] = None) extends RestI
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   if (params.https_enable) {
-    val password: Array[Char] = params.https_cert_pass.toCharArray
-    val ks: KeyStore = KeyStore.getInstance("PKCS12")
-    val keystorePath: String = params.https_certificate
-    val keystore: InputStream = getClass.getResourceAsStream(keystorePath)
+    val certFormat = config.getString("starchat.https.certificates.format")
+    val sslCtx = certFormat match {
+      case "jks" =>
+        val path = config.getString("starchat.https.certificates.jks.keystore")
+        val password = config.getString("starchat.https.certificates.jks.password")
+        SslContext.jks(path, password)
+      case "pkcs12" | _ =>
+        val path = config.getString("starchat.https.certificates.pkcs12.keystore")
+        val password = config.getString("starchat.https.certificates.pkcs12.password")
+        SslContext.pkcs12(path, password)
+    }
 
-    require(keystore != None.orNull, "Keystore required!")
-    ks.load(keystore, password)
-
-    val keyManagerFactory: KeyManagerFactory = KeyManagerFactory.getInstance("SunX509")
-    keyManagerFactory.init(ks, password)
-
-    val tmf: TrustManagerFactory = TrustManagerFactory.getInstance("SunX509")
-    tmf.init(ks)
-
-    val sslContext: SSLContext = SSLContext.getInstance("TLS")
-    sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
-    val https: HttpsConnectionContext = ConnectionContext.https(sslContext)
+    val https: HttpsConnectionContext = ConnectionContext.https(sslCtx)
 
     Http()
       .bindAndHandleAsync(handler = Route.asyncHandler(routes),

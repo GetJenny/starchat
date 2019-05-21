@@ -1,9 +1,9 @@
 state,executionOrder,maxStateCount,analyzer,queries,bubble,action,actionInput,stateData,successValue,failureValue,evaluationClass
-help,1,0,"band(keyword(""help""))",,"Ask me questions like... how to install? ...how to contribute? ...is it open source? ...how to install with docker? ...how to make a standalone installation? ...how to index data?",,,,,,
-further_details_access_question,1,0,"or(and(or(keyword(""problem.*""),keyword(""issue.*""),keyword(""trouble.*"")),keyword(""account"")))","[""cannot access account"", ""problem access account""]",Can you specify which of the following problems you have? [NB works only if buttons can be shown!],show_buttons,"{""Forgot Password"": ""forgot_password"", ""Account locked"": ""account_locked"", ""Specify your problem"": ""specify_problem"", ""I want to call an operator"": ""call_operator"", ""None of the above"": ""start""}","{""verification"": ""did you mean you can't access to your account?""}",eval(show_buttons),dont_understand,
+help,1,0,"band(keyword(""help""))",,"Ask me questions like... how to install? ...how to contribute? ...is it open source? ...how to install with docker? ...how to make a standalone installation? ...how to index data?",,,,,,default
+further_details_access_question,1,0,"or(and(or(keyword(""problem.*""),keyword(""issue.*""),keyword(""trouble.*"")),keyword(""account"")))","[""cannot access account"", ""problem access account""]",Can you specify which of the following problems you have? [NB works only if buttons can be shown!],show_buttons,"{""Forgot Password"": ""forgot_password"", ""Account locked"": ""account_locked"", ""Specify your problem"": ""specify_problem"", ""I want to call an operator"": ""call_operator"", ""None of the above"": ""start""}","{""verification"": ""did you mean you can't access to your account?""}",eval(show_buttons),dont_understand,default
 contribute,1,0,"bor(keyword(""contribute""))",,"To contribute to <a href=""http://git.io/*chat"">StarChat</a>, please send us a pull request from your fork of this repository.
 <br>Our concise contribution guideline contains the bare minimum requirements of the code contributions.
-<br>Before contributing (or opening issues), you might want to email us at starchat@getjenny.com.",,,,,,
+<br>Before contributing (or opening issues), you might want to email us at starchat@getjenny.com.",,,,,,default
 quickstart,1,0,"band(bor(keyword(""start""), keyword(""quickstart"")), keyword(""starchat""))",,"The easiest way is to install StarChat using two docker images. You only need:
 <br>
 <ul>
@@ -21,7 +21,7 @@ If you do not use docker you therefore need on your machine:
 <li>Elasticsearch 5.3</li>
 </ul>
 Just type “docker install” or “standalone install” to go on.
-",,,,,,
+",,,,,,default
 docker_install,1,0,"band(keyword(""docker""), keyword(""install.*""))",,"In the terminal, go into the root directory of StarChat, and generate a packet distribution:
 <br>
 <code>sbt dist</code>
@@ -40,7 +40,7 @@ Now launch the dockers:
 <br>
 <code>docker-compose up -d</code>
 <br>
-If you have problems, tell me the output (eg <em>elastisearch exited with code 78</em>) otherwise type <em>create elasticsearch indices</em>.",,,,,,
+If you have problems, tell me the output (eg <em>elastisearch exited with code 78</em>) otherwise type <em>create elasticsearch indices</em>.",,,,,,default
 create_es_indices,1,0,"band(keyword(""create""), keyword(""elastic.*""),  bor(keyword(""index""),  keyword(""indices""),  keyword(""indeces""),  keyword(""indexes"")))",,"Run
 <br>
 <code>./docker-starchat/starchat/scripts/api_test/postIndexManagementCreate.sh</code>
@@ -48,9 +48,9 @@ create_es_indices,1,0,"band(keyword(""create""), keyword(""elastic.*""),  bor(ke
 (to delete previously created indexes: <code>./docker-starchat/starchat/scripts/api_test/deleteIndexManagement.sh</code>)
 <br>
 Now ask me how to <em>load configuration file</em>.
-",,,,,,
-delete_es_indexes,1,0,"band(keyword(""delete""), bor(keyword(""index.*""), keyword(""indic.*"")))",,To delete previously created indexes:<br><code>./docker-starchat/starchat/scripts/api_test/deleteIndexManagement.sh</code>.,,,,,,
-create_es_indexes,1,0,"band(keyword(""create""), bor(keyword(""index.*""), keyword(""indic.*"")))",,To create Elasticsearch indexes:<br> <code>./docker-starchat/starchat/scripts/api_test/postIndexManagementCreate.sh</code>,,,,,,
+",,,,,,default
+delete_es_indexes,1,0,"band(keyword(""delete""), bor(keyword(""index.*""), keyword(""indic.*"")))",,To delete previously created indexes:<br><code>./docker-starchat/starchat/scripts/api_test/deleteIndexManagement.sh</code>.,,,,,,default
+create_es_indexes,1,0,"band(keyword(""create""), bor(keyword(""index.*""), keyword(""indic.*"")))",,To create Elasticsearch indexes:<br> <code>./docker-starchat/starchat/scripts/api_test/postIndexManagementCreate.sh</code>,,,,,,default
 index_data,1,0,"band(keyword(""index""), keyword(""data""))",,"There are three kind of data on starchat:
 <ul>
   <li>Knowledge Base: contains a dataset wit Questions/Answers and is used by the question/answer recommender.</li>
@@ -62,16 +62,16 @@ To index data into the Knowledge Base see: <a href=""https://getjenny.github.io/
 <br>
 To index data into the Decision Table see: <a href=""https://getjenny.github.io/starchat-doc/#configuration-of-the-decisiontable"">Configuration of the Decision Table</a>
 <br>
-To index terms you can download a pre-trained word2vec model or train a new model by yourself, note that indexing programs only accept a textual format for the input file: <a href=""https://getjenny.github.io/starchat-doc/#indexing-terms-on-term-table"">Indexing of the terms vector dataset</a>",,,,,,
-index_analyzer,1,0,"band(bor(keyword(""index""),keyword(""load"")), keyword(""analyzer""))",,If you want to re-index the analyzer fields:<br><code>./docker-starchat/starchat/scripts/api_test/postAnalyzer.sh</code>.,,,,,,
+To index terms you can download a pre-trained word2vec model or train a new model by yourself, note that indexing programs only accept a textual format for the input file: <a href=""https://getjenny.github.io/starchat-doc/#indexing-terms-on-term-table"">Indexing of the terms vector dataset</a>",,,,,,default
+index_analyzer,1,0,"band(bor(keyword(""index""),keyword(""load"")), keyword(""analyzer""))",,If you want to re-index the analyzer fields:<br><code>./docker-starchat/starchat/scripts/api_test/postAnalyzer.sh</code>.,,,,,,default
 load_conf_file,1,0,"band(keyword(""load.*""), bor(keyword(""config.*""), band(keyword(""decision""), keyword(""table""))), keyword(""file.*""))",,"Just run:
 <br>
-<code>./docker-starchat/starchat/bin/index-decision-table --inputfile <em>FILENAME</em></code>.",,,,,,
+<code>./docker-starchat/starchat/bin/index-decision-table --inputfile <em>FILENAME</em></code>.",,,,,,default
 install,1,0,"band(bor(keyword(""setup""), keyword(""install.*"")), bnot(bor(keyword(""standalone""), keyword(""docker""))))",,"Just choose one of the two:
 <ul>
 <li>docker install (recommended)</li>
 <li>standalone install</li>
-</ul>",,,,,,
+</ul>",,,,,,default
 standalone_install,1,0,"band(keyword(""standal.*""), keyword(""install""))",,"Have a look at <a href=""https://getjenny.github.io/starchat-doc/#install-without-docker"">how to install without Docker</a>.",show_buttons,"{ ""Excellent"": ""excellent_feedback"", ""Terrible"": ""terrible_feedback"" }",,eval(show_buttons),dont_understand,
 code_78,1,0,"band(keyword(""code""),keyword(""78""))",,"If elasticsearch complain about the size of the virtual memory:
 <br>
@@ -81,9 +81,9 @@ code_78,1,0,"band(keyword(""code""),keyword(""78""))",,"If elasticsearch complai
 <br>
 run:
 <br>
-<code>Sysctl -w vm.max_map_count=262144</code>",,,,,,
-licence,1,0,"bor(band(keyword(""open""), keyword(""source"")), keyword(""opensource""), keyword(""licence""))",,"StarChat is Open Source software, namely released under the General Public Licence 2. More information on the <a href=""http://git.io/*chat"">repository</a>",,,,,,
-terrible_feedback,1,0,"booleanor(keyword(""idiot""), keyword(""fuck.*""), keyword(""screw""), keyword(""damn.*""), keyword(""asshole""))",,"I might be wrong, but I detected swearing. Cannot answer to that.",,,,,,
-call_operator,1,0,"band(bor(keyword(""call""),keyword(""talk""),keyword(""speak"")),keyword(""operator""))",,"No operator is available at the moment, sorry. You just have me.",,,,,,
-any_further,1,0,,,"Let me know if you have any other request, or type 'Bye' to close the chat",,,,,,
-dont_understand,1,0,,,"I do not understand your input, please try again or type ""help"" to know my capabilities",,,,,,
+<code>Sysctl -w vm.max_map_count=262144</code>",,,,,,default
+licence,1,0,"bor(band(keyword(""open""), keyword(""source"")), keyword(""opensource""), keyword(""licence""))",,"StarChat is Open Source software, namely released under the General Public Licence 2. More information on the <a href=""http://git.io/*chat"">repository</a>",,,,,,default
+terrible_feedback,1,0,"booleanor(keyword(""idiot""), keyword(""fuck.*""), keyword(""screw""), keyword(""damn.*""), keyword(""asshole""))",,"I might be wrong, but I detected swearing. Cannot answer to that.",,,,,,default
+call_operator,1,0,"band(bor(keyword(""call""),keyword(""talk""),keyword(""speak"")),keyword(""operator""))",,"No operator is available at the moment, sorry. You just have me.",,,,,,default
+any_further,1,0,,,"Let me know if you have any other request, or type 'Bye' to close the chat",,,,,,default
+dont_understand,1,0,,,"I do not understand your input, please try again or type ""help"" to know my capabilities",,,,,,default

@@ -6,7 +6,11 @@ package com.getjenny.starchat.entities
 
 import scala.collection.immutable.Map
 
-case class ResponseRequestInUserInput(text: Option[String], img: Option[String])
+case class ResponseRequestInUserInput(
+                                       text: Option[String] = None,
+                                       img: Option[String] = None,
+                                       audio: Option[String] = None
+                                     )
 
 case class ResponseRequestIn(conversationId: String,
                              traversedStates: Option[Vector[String]] = None,

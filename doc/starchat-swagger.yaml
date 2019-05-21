@@ -3029,6 +3029,26 @@ components:
           type: string
           description: a message in case of errors
           example: ""
+    DtActionResult:
+      type: object
+      description: "data returned by the actions executed by StarChat"
+      proprties:
+        success:
+          type: boolean
+          description: "true if the action succeeded, otherwise false"
+          example: true
+          default: false
+          code:
+            type: number
+            format: integer
+            description: "exit code for the action"
+            example: 0
+            default: 0
+          data:
+            type: object
+            desctiption: "a string to string, map for data returned by the action"
+            default: {}
+            example: {}
     ResponseRequestOut:
       type: object
       required:
@@ -3112,6 +3132,8 @@ components:
           format: double
           description: the score for the state
           example: 0.83
+        actionResult:
+          $ref: '#/components/schemas/DtActionResult'
     ResponseRequestOutOperationResult:
       type: object
       required:

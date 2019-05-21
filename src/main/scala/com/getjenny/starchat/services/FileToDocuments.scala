@@ -40,9 +40,10 @@ object FileToDocuments extends JsonSupport {
       case _ => throw FileToDocumentsException("empty or malformed file: " + file.getPath)
     }
 
-    fileEntries.tail.map(entry => {
+    fileEntries.tail.map { entry =>
       if (entry.length =/= header.length) {
-        val message = "file row is not consistent entry(" + entry.length + ") != header(" + header.length + ") Row(" + entry.toString + ")"
+        val message = "file row is not consistent entry(" + entry.length + ") != header(" + header.length +
+          ") Row(" + entry.toString + ")"
         throw new Exception(message)
       } else {
         val queriesCsvString = entry(header("queries"))
@@ -67,6 +68,9 @@ object FileToDocuments extends JsonSupport {
         val queries = Await.result(queriesFuture, 10.second)
         val actionInput = Await.result(actionInputFuture, 10.second)
         val stateData = Await.result(stateDataFuture, 10.second)
+        val evaluationClass: Option[String] = if(entry.contains("evaluationClass")) {
+          Some{entry(header("evaluationClass"))}
+        } else None
 
         val document = DTDocument(state = entry(header("state")),
           executionOrder = entry(header("executionOrder")).toInt,
@@ -79,12 +83,12 @@ object FileToDocuments extends JsonSupport {
           stateData = stateData,
           successValue = entry(header("successValue")),
           failureValue = entry(header("failureValue")),
-          evaluationClass =  Some(entry(header("evaluationClass")))
+          evaluationClass =  evaluationClass
         )
 
         document
       }
-    })
+    }
   }
 
   def getTermsDocumentsFromCSV(log: LoggingAdapter, file: File, skipLines: Int = 0, separator: Char = ','):
@@ -108,13 +112,15 @@ object FileToDocuments extends JsonSupport {
     }
     fileEntries.tail.map(entry => {
       if (entry.length =/= header.length) {
-        val message = "file row is not consistent (" + entry.length + "!=" + header.length + ") Row(" + entry.toString + ")"
+        val message = "file row is not consistent (" + entry.length + "!=" + header.length +
+          ") Row(" + entry.toString + ")"
         throw FileToDocumentsException(message)
       } else {
         //type,term,associatedTerms,score
         val termType = entry(header("type"))
         val term = entry(header("term"))
-        val associatedTerms = entry(header("associatedTerms")).split(";").map( entry => entry.split(":"))
+        val associatedTerms = entry(header("associatedTerms"))
+          .split(";").map( entry => entry.split(":"))
           .map(x => (x(0), x(1).toDouble)).toMap
 
         val document = if(termType === "SYN") {

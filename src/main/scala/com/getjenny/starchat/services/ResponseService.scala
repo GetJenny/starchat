@@ -8,10 +8,10 @@ import akka.event.{Logging, LoggingAdapter}
 import com.getjenny.analyzer.analyzers._
 import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
 import com.getjenny.starchat.SCActorSystem
-import com.getjenny.starchat.entities._
+import com.getjenny.starchat.entities.{ResponseRequestOut, _}
 import com.getjenny.starchat.services.esclient.DecisionTableElasticClient
 import scalaz.Scalaz._
-
+import com.getjenny.starchat.services.actions._
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -36,6 +36,15 @@ object ResponseService extends AbstractDataService {
   override val elasticClient: DecisionTableElasticClient.type = DecisionTableElasticClient
   private[this] val log: LoggingAdapter = Logging(SCActorSystem.system, this.getClass.getCanonicalName)
   private[this] val decisionTableService: DecisionTableService.type = DecisionTableService
+
+  private[this] def executeAction(indexName: String, document: ResponseRequestOut): ResponseRequestOut = {
+    if (document.action.startsWith(DtAction.actionPrefix)) {
+      val res = DtAction(indexName, document.state, document.action, document.actionInput)
+      document.copy(actionResult = Some{res})
+    } else {
+      document
+    }
+  }
 
   def getNextResponse(indexName: String, request: ResponseRequestIn): Future[ResponseRequestOutOperationResult] = Future {
 
@@ -151,6 +160,7 @@ object ResponseService extends AbstractDataService {
           val maxStateCount: Int = doc.maxStateCount
           val analyzer: String = doc.analyzer
           var bubble: String = doc.bubble
+          val action: String = doc.action
           var actionInput: Map[String, String] = doc.actionInput
           val stateData: Map[String, String] = doc.stateData
 
@@ -182,7 +192,7 @@ object ResponseService extends AbstractDataService {
             traversedStates = traversedStatesUpdated,
             analyzer = analyzer,
             bubble = bubble,
-            action = doc.action,
+            action = action,
             data = cleanedData,
             actionInput = actionInput,
             stateData = stateData,
@@ -190,7 +200,9 @@ object ResponseService extends AbstractDataService {
             failureValue = doc.failureValue,
             score = evaluationRes.score)
           responseItem
-        }.toList.sortWith(_.score > _.score)
+        }.toList.sortWith(_.score > _.score).map { document =>
+            executeAction(indexName, document = document)
+        }
 
         if(dtDocumentsList.isEmpty) {
           throw ResponseServiceNoResponseException(
@@ -201,7 +213,7 @@ object ResponseService extends AbstractDataService {
           Option {dtDocumentsList})
       }
 
-    }).flatten.map(x => x)
+    }).flatten
     Await.result(returnState, 30.second)
   }
 }

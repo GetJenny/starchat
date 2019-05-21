@@ -20,7 +20,7 @@ libraryDependencies ++= {
   val AkkaHttpVersion	= "10.1.8"
   val AkkaVersion	= "2.5.22"
   val BreezeVersion	= "0.13.2"
-  val ESClientVersion	= "7.0.0"
+  val ESClientVersion	= "7.0.1"
   val LogbackVersion	= "1.2.3"
   val RoundeightsHasherVersion	= "1.2.0"
   val ScalatestVersion	= "3.0.5"
@@ -30,6 +30,7 @@ libraryDependencies ++= {
   val ManausLibVersion = "1.0.1"
   val StanfordCoreNLP = "3.9.2"
   val AnalyzerVersion = "1.0.11"
+  val CourierVersion = "1.0.0"
   Seq(
     "com.getjenny" %% "manaus-lib" % ManausLibVersion,
     "com.getjenny" %% "analyzer" % AnalyzerVersion,
@@ -56,7 +57,8 @@ libraryDependencies ++= {
     "org.scalanlp" %% "breeze" % BreezeVersion,
     "org.scalanlp" %% "breeze-natives" % BreezeVersion,
     "org.scalatest" %% "scalatest" % ScalatestVersion % Test,
-    "org.scalaz" %% "scalaz-core" % ScalazVersion
+    "org.scalaz" %% "scalaz-core" % ScalazVersion,
+    "com.github.daddykotex" %% "courier" % CourierVersion
   )
 }
 
@@ -76,7 +78,7 @@ git.useGitDescribe := true
 
 //http://www.scala-sbt.org/sbt-native-packager/formats/docker.html
 dockerCommands := Seq(
-  Cmd("FROM", "openjdk:11"),
+  Cmd("FROM", "java:11"),
   Cmd("RUN", "apt", "update"),
   Cmd("RUN", "apt", "install", "-y", "netcat"),
   Cmd("LABEL", "maintainer=\"Angelo Leto <angelo@getjenny.com>\""),
