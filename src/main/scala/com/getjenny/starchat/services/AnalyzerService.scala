@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.event.{Logging, LoggingAdapter}
 import com.getjenny.analyzer.expressions.{AnalyzersData, AnalyzersDataInternal}
 import com.getjenny.starchat.SCActorSystem
-import com.getjenny.starchat.analyzer.analyzers.StarChatAnalyzer
+import com.getjenny.starchat.analyzer.analyzers.{AbstractAnalyzer, AnalyzerBuilderFactory, ScriptEngines, StarChatAnalyzer}
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.services.esclient.DecisionTableElasticClient
 import com.getjenny.starchat.utils.Index
@@ -31,14 +31,15 @@ case class AnalyzerServiceException(message: String = "", cause: Throwable = Non
   extends Exception(message, cause)
 
 case class AnalyzerItem(declaration: String,
-                        analyzer: Option[StarChatAnalyzer],
+                        scriptEngine: ScriptEngines.Value,
+                        analyzer: Option[AbstractAnalyzer],
                         build: Boolean,
                         message: String)
 
 case class DecisionTableRuntimeItem(executionOrder: Int = -1,
                                     maxStateCounter: Int = -1,
                                     analyzer: AnalyzerItem = AnalyzerItem(
-                                      declaration = "", analyzer = None, build = false, message = ""
+                                      declaration = "", scriptEngine = ScriptEngines.value(""), analyzer = None, build = false, message = ""
                                     ),
                                     version: Long = -1L,
                                     evaluationClass: String = "default",
@@ -53,6 +54,17 @@ case class ActiveAnalyzers(
 
 object AnalyzerService extends AbstractDataService {
   override val elasticClient: DecisionTableElasticClient.type = DecisionTableElasticClient
+  private[this] val analyzerBuilderFactory: AnalyzerBuilderFactory.type = AnalyzerBuilderFactory
+  private[this] val parseAnalyzer: String => (ScriptEngines.Value, String) = {
+    val pattern = """^type\/(\w+)\n([\s\S]*)$""".r
+    analyzer: String => Try {
+      val pattern(mimeType, declaration) = analyzer
+      (ScriptEngines.value(mimeType), declaration)
+    } match {
+      case Success(res) => res
+      case Failure(_) => (ScriptEngines.GJANALYZERS, analyzer)
+    }
+  }
 
   var analyzersMap : concurrent.Map[String, ActiveAnalyzers] = new ConcurrentHashMap[String, ActiveAnalyzers]().asScala
   val log: LoggingAdapter = Logging(SCActorSystem.system, this.getClass.getCanonicalName)
@@ -90,7 +102,7 @@ object AnalyzerService extends AbstractDataService {
         val version : Long = item.getVersion
         val source : Map[String, Any] = item.getSourceAsMap.asScala.toMap
 
-        val analyzerDeclaration : String = source.get("analyzer") match {
+        val analyzer: String = source.get("analyzer") match {
           case Some(t) => t.asInstanceOf[String]
           case _ => ""
         }
@@ -123,10 +135,13 @@ object AnalyzerService extends AbstractDataService {
           queryTerms
         }).filter(_.terms.terms.nonEmpty)
 
+        val (scriptEngine: ScriptEngines.Value, analyzerDeclaration: String) = parseAnalyzer(analyzer)
+
         val decisionTableRuntimeItem: DecisionTableRuntimeItem =
           DecisionTableRuntimeItem(executionOrder=executionOrder,
             maxStateCounter=maxStateCounter,
             analyzer=AnalyzerItem(declaration=analyzerDeclaration, build=false,
+              scriptEngine = scriptEngine,
               analyzer = None,
               message = "Analyzer index(" + indexName + ") state(" + state + ") not built"),
             queries = queriesTerms,
@@ -144,7 +159,7 @@ object AnalyzerService extends AbstractDataService {
     analyzersLHM
   }
 
-  private[this] case class BuildAnalyzerResult(analyzer : Option[StarChatAnalyzer], version: Long,
+  private[this] case class BuildAnalyzerResult(analyzer : Option[AbstractAnalyzer], version: Long,
                                                build : Boolean,
                                                message: String)
 
@@ -158,6 +173,7 @@ object AnalyzerService extends AbstractDataService {
       val executionOrder = runtimeItem.executionOrder
       val maxStateCounter = runtimeItem.maxStateCounter
       val analyzerDeclaration = runtimeItem.analyzer.declaration
+      val analyzerScriptEngine = runtimeItem.analyzer.scriptEngine
       val queriesTerms = runtimeItem.queries
       val version: Long = runtimeItem.version
       val evaluationClass: String = runtimeItem.evaluationClass
@@ -174,7 +190,8 @@ object AnalyzerService extends AbstractDataService {
               version = version, message = "Analyzer already built: " + stateId,
               build = inPlaceAnalyzer.analyzer.build)
           } else {
-            Try(new StarChatAnalyzer(analyzerDeclaration, restrictedArgs)) match {
+            val analyzerBuilder = analyzerBuilderFactory.get(analyzerScriptEngine)
+            Try(analyzerBuilder.build(analyzerDeclaration, restrictedArgs)) match {
               case Success(analyzerObject) =>
                 val msg = "Analyzer successfully built index(" + indexName + ") state(" + stateId +
                   ") version(" + version + ":" + inPlaceAnalyzer.version + ")"
@@ -200,6 +217,7 @@ object AnalyzerService extends AbstractDataService {
         analyzer =
           AnalyzerItem(
             declaration = analyzerDeclaration,
+            scriptEngine = analyzerScriptEngine,
             build = buildAnalyzerResult.build,
             analyzer = buildAnalyzerResult.analyzer,
             message = buildAnalyzerResult.message
@@ -273,8 +291,10 @@ object AnalyzerService extends AbstractDataService {
 
   def evaluateAnalyzer(indexName: String, analyzerRequest: AnalyzerEvaluateRequest):
   Future[Option[AnalyzerEvaluateResponse]] = {
+    val (scriptEngine: ScriptEngines.Value, declaration: String) = parseAnalyzer(analyzerRequest.analyzer)
+    val analyzerBuilder = analyzerBuilderFactory.get(scriptEngine)
     val restrictedArgs: Map[String, String] = Map("index_name" -> indexName)
-    val analyzer = Try(new StarChatAnalyzer(analyzerRequest.analyzer, restrictedArgs))
+    val analyzer = Try(analyzerBuilder.build(declaration, restrictedArgs))
 
     analyzer match {
       case Failure(exception) =>
@@ -307,6 +327,7 @@ object AnalyzerService extends AbstractDataService {
         }
     }
   }
+
 
 }
 

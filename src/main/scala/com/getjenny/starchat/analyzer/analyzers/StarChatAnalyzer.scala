@@ -13,3 +13,4 @@ class StarChatAnalyzer(command: String, restrictedArgs: Map[String, String])
     override val atomicFactory = new StarchatFactoryAtomic
     override val operatorFactory = new DefaultFactoryOperator
   } with DefaultParser(command: String, restrictedArgs: Map[String, String])
+  with AbstractAnalyzer
