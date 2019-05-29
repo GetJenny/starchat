@@ -23,7 +23,7 @@ object AnalyzerBuilderFactory {
   def get(scriptEngine: ScriptEngines.Value): AnalyzerAbstractBuilder = scriptEngine match {
     case ScriptEngines.SCALAJS => ScalaJSAnalyzerBuilder
     case ScriptEngines.GJANALYZERS => GetJennyAnalyzerBuilder
-    case _ => GetJennyAnalyzerBuilder // maybe not necessary ¯\_(ツ)_/¯
+    case _ => GetJennyAnalyzerBuilder
   }
 
 }

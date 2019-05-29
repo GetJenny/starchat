@@ -112,7 +112,6 @@ class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest wi
         Post("/index_getjenny_english_0/term/delete?refresh=1", DocsIds(ids)) ~> addCredentials(testUserCredentials) ~> routes ~> check {
           status shouldEqual StatusCodes.OK
           val response = responseAs[DeleteDocumentsResult]
-          //print(response.data.map(_.id))
         }
       )
     }
