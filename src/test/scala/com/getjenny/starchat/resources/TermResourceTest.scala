@@ -166,7 +166,7 @@ class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest wi
 
   "POST /<index_name>/term/text" should {
     "return an HTTP code 200 with text input" in {
-      Post("/index_getjenny_english_0/term/text", "hello, hellö this is my query") ~> addCredentials(testUserCredentials) ~> routes ~> check {
+      Post("/index_getjenny_english_0/term/text", "hello, this is my query") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         print(responseEntity)
       }

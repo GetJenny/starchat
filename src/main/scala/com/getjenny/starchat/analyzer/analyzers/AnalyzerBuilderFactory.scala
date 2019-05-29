@@ -15,7 +15,7 @@ object ScriptEngines extends Enumeration {
   val SCALAJS,
       GJANALYZERS = ScriptEngines.Value
 
-  def value(v: String) = values.find(_.toString == v).getOrElse(GJANALYZERS)
+  def value(v: String) = values.find(_.toString === v).getOrElse(GJANALYZERS)
 }
 
 object AnalyzerBuilderFactory {
