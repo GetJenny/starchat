@@ -31,6 +31,7 @@ libraryDependencies ++= {
   val StanfordCoreNLP = "3.9.2"
   val AnalyzerVersion = "1.0.11"
   val CourierVersion = "1.0.0"
+  val scalaJSVersion = "0.6.27"
   Seq(
     "com.getjenny" %% "manaus-lib" % ManausLibVersion,
     "com.getjenny" %% "analyzer" % AnalyzerVersion,
@@ -58,7 +59,11 @@ libraryDependencies ++= {
     "org.scalanlp" %% "breeze-natives" % BreezeVersion,
     "org.scalatest" %% "scalatest" % ScalatestVersion % Test,
     "org.scalaz" %% "scalaz-core" % ScalazVersion,
-    "com.github.daddykotex" %% "courier" % CourierVersion
+    "com.github.daddykotex" %% "courier" % CourierVersion,
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+    "org.scala-js" % "scalajs-compiler_2.12.8" % scalaJSVersion,
+    "org.scala-js" %% "scalajs-tools" % scalaJSVersion,
+    "org.scala-js" %% "scalajs-library" % scalaJSVersion
   )
 }
 
