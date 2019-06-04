@@ -70,7 +70,7 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
       val classPaths: Array[String] = settings.classpath.value.split(":")
       classPaths.find(_.contains("scalajs-library")).getOrElse(throw new Exception("scalajs-library not found"))
     }
-    private val linkerLibraries: Seq[VirtualRelativeIRFile] = {
+    private[this] val linkerLibraries: Seq[VirtualRelativeIRFile] = {
       val irCache: IRFileCache#Cache = new IRFileCache().newCache
       val irContainers: Seq[IRFileCache.IRContainer] = IRFileCache.IRContainer.fromClasspath(Seq(new File(scalaJSLibrary)))
       irCache.cached(irContainers)
