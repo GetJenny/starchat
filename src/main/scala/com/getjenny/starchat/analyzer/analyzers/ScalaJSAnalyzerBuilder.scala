@@ -1,22 +1,26 @@
 package com.getjenny.starchat.analyzer.analyzers
 import java.io.File
+
 import javax.script.{Compilable, ScriptEngine, ScriptEngineManager}
 import org.scalajs.core.tools.io.{IRFileCache, MemVirtualSerializedScalaJSIRFile, VirtualScalaJSIRFile, WritableMemVirtualJSFile}
 import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.linker.{ModuleInitializer, StandardLinker}
 import org.scalajs.core.tools.logging.ScalaConsoleLogger
+
 import scala.reflect.io.VirtualDirectory
 import scala.reflect.io
 import scala.tools.nsc.plugins.Plugin
 import scala.tools.nsc.reporters.ConsoleReporter
 import scala.tools.nsc.{Global, Settings}
+import scala.util.{Failure, Success, Try}
 
 object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
-  private val engine: ScriptEngine with Compilable = {
-    val manager = new ScriptEngineManager(null)
+  private[this] val engine: ScriptEngine with Compilable = {
+    val manager = new ScriptEngineManager(getClass.getClassLoader)
     manager.getEngineByName("nashorn") match {
       case engine: ScriptEngine with Compilable => engine
+      case _ => throw new Exception("can't create the ScriptEngine")
     }
   }
 
@@ -24,31 +28,29 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
     * Defines the names of the module and the main method of the ScalaJS script.
     * The script must contain object ScalaJSAnalyzer with main method in order to work.
     */
-  private val mainModuleInitializerSeq = Seq(ModuleInitializer
+  private[this] val mainModuleInitializerSeq = Seq(ModuleInitializer
     .mainMethodWithArgs(moduleClassName = "ScalaJSAnalyzer",
       mainMethodName = "main",
       args = Nil
     ))
-  private var compiler = new Compiler
-  private var processor = new Processor
+  private[this] var compiler = new Compiler
+  private[this] var processor = new Processor
 
   def build(script: String, restrictedArgs: Map[String, String] = Map.empty): ScalaJSAnalyzer = {
     /**
       * If and error happens during the compiler or linking process, the module cannot be reused
       * and have to reinitialize.
       */
-    val sjsirFiles = try{
-      compiler.compile(script)
-    } catch {
-      case e: Throwable => {
+    val sjsirFiles = Try(compiler.compile(script)) match {
+      case Success(value) => value
+      case Failure(e) => {
         compiler = new Compiler()
         throw e
       }
     }
-    val javaScript = try {
-      processor.process(sjsirFiles)
-    } catch {
-      case e: Throwable => {
+    val javaScript = Try(processor.process(sjsirFiles)) match {
+      case Success(value) => value
+      case Failure(e) => {
         processor = new Processor()
         throw e
       }
@@ -60,24 +62,24 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
   /**
     * Compiles the ScalaJS script into .sjsir files
     */
-  private class Compiler {
-    private val settings = new Settings()
+  private[this] class Compiler {
+    private[this] val settings = new Settings()
     settings.embeddedDefaults(getClass.getClassLoader)
-    private val reporter = new ConsoleReporter(settings) // use different reporter?
-    private val scalaJSLibrary: String = {
+    private[this] val reporter = new ConsoleReporter(settings) // use different reporter?
+    private[this] val scalaJSLibrary: String = {
       val classPaths: Array[String] = settings.classpath.value.split(":")
-      classPaths.find(_.contains("scalajs-library")).get
+      classPaths.find(_.contains("scalajs-library")).getOrElse(throw new Exception("scalajs-library not found"))
     }
     private val linkerLibraries: Seq[VirtualRelativeIRFile] = {
       val irCache: IRFileCache#Cache = new IRFileCache().newCache
       val irContainers: Seq[IRFileCache.IRContainer] = IRFileCache.IRContainer.fromClasspath(Seq(new File(scalaJSLibrary)))
       irCache.cached(irContainers)
     }
-    private val compiler: Global = new Global(settings, reporter) {
+    private[this] val compiler: Global = new Global(settings, reporter) {
       override lazy val plugins: List[Plugin] = List(new org.scalajs.core.compiler.ScalaJSPlugin(this))
     }
 
-    private def makeFile(src: Array[Byte], fileName: String = "ScalaJSScript.scala") = {
+    private[this] def makeFile(src: Array[Byte], fileName: String = "ScalaJSScript.scala") = {
       val singleFile = new io.VirtualFile(fileName)
       val output     = singleFile.output
       output.write(src)
@@ -110,10 +112,10 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
   /**
     * Processes the .sjsir files into JavaScript
     */
-  private class Processor {
-    private val linkerConfig = StandardLinker.Config()
-    private val linker = StandardLinker(linkerConfig)
-    private val logger = new ScalaConsoleLogger() // use different logger?
+  private[this] class Processor {
+    private[this] val linkerConfig = StandardLinker.Config()
+    private[this] val linker = StandardLinker(linkerConfig)
+    private[this] val logger = new ScalaConsoleLogger() // use different logger?
 
     def process(sjsirFiles: Seq[VirtualScalaJSIRFile]): String = {
       val output = WritableMemVirtualJSFile("output.js")
