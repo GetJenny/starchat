@@ -10,9 +10,12 @@ import org.scalajs.core.tools.logging.ScalaConsoleLogger
 import scala.reflect.io.VirtualDirectory
 import scala.reflect.io
 import scala.tools.nsc.plugins.Plugin
-import scala.tools.nsc.reporters.ConsoleReporter
+import scala.tools.nsc.reporters.StoreReporter
 import scala.tools.nsc.{Global, Settings}
 import scala.util.{Failure, Success, Try}
+
+class CompilationFailedException(val messages: Iterable[(Int, String)])
+  extends Exception(messages.map(message => message._1 + ". " + message._2).mkString("\n"))
 
 object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
@@ -65,7 +68,7 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
   private[this] class Compiler {
     private[this] val settings = new Settings()
     settings.embeddedDefaults(getClass.getClassLoader)
-    private[this] val reporter = new ConsoleReporter(settings) // use different reporter?
+    private[this] val reporter = new StoreReporter
     private[this] val scalaJSLibrary: String = {
       val classPaths: Array[String] = settings.classpath.value.split(":")
       classPaths.find(_.contains("scalajs-library")).getOrElse(throw new Exception("scalajs-library not found"))
@@ -95,7 +98,11 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
       run.compileFiles(List(scalaJSFile))
 
-      if(target.iterator.isEmpty) throw new Exception("The script was probably flawed")
+      if(reporter.hasWarnings || reporter.hasErrors){
+        val errors = reporter.infos.map(info => (info.pos.line, info.msg))
+        throw new CompilationFailedException(errors)
+      }
+      if(target.iterator.isEmpty) throw new Exception("Output was empty")
 
       val sjsirFiles = for {
         x <- target.iterator.to[collection.immutable.Traversable]
@@ -127,4 +134,5 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
       output.content
     }
   }
+
 }
