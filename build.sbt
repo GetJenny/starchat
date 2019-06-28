@@ -1,4 +1,4 @@
-import NativePackagerHelper._
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper._
 import com.typesafe.sbt.packager.docker._
 
 name := "StarChat"
@@ -16,6 +16,10 @@ resolvers +=
 resolvers +=
   "Sonatype OSS Releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 
+
+val scalaJSVersion = "0.6.27"
+val scalaVersionForScalaJSCompiler = "2.12.8"
+
 libraryDependencies ++= {
   val AkkaHttpVersion	= "10.1.8"
   val AkkaVersion	= "2.5.22"
@@ -31,7 +35,9 @@ libraryDependencies ++= {
   val StanfordCoreNLP = "3.9.2"
   val AnalyzerVersion = "1.0.11"
   val CourierVersion = "1.0.0"
-  val scalaJSVersion = "0.6.27"
+  val snappyJavaVersion = "1.1.2.6"
+  val upickleVersion = "0.4.4"
+  val larrayVersion = "0.4.0"
   Seq(
     "com.getjenny" %% "manaus-lib" % ManausLibVersion,
     "com.getjenny" %% "analyzer" % AnalyzerVersion,
@@ -63,9 +69,33 @@ libraryDependencies ++= {
     "org.scala-lang" % "scala-compiler" % scalaVersion.value,
     "org.scala-js" % "scalajs-compiler_2.12.8" % scalaJSVersion,
     "org.scala-js" %% "scalajs-tools" % scalaJSVersion,
-    "org.scala-js" %% "scalajs-library" % scalaJSVersion
+    "com.lihaoyi" %% "upickle" % upickleVersion,
+    "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
+    "org.xerial.larray" %% "larray" % larrayVersion
   )
 }
+lazy val scalaJSCompilerLibs = project
+  .settings(
+    scalaVersion := scalaVersionForScalaJSCompiler,
+    libraryDependencies ++= {
+      Seq(
+        "org.scala-js" %% "scalajs-library" % scalaJSVersion
+      )
+    }
+  )
+
+(Compile / resources) ++= (scalaJSCompilerLibs / Compile / managedClasspath).value.map(_.data)
+(Compile / resourceGenerators) += Def.task {
+      // build and store a version property file
+      val file = (Compile / resourceManaged).value / "version.properties"
+      val contents =
+        s"""
+           |scalaVersion=$scalaVersionForScalaJSCompiler
+           |scalaJSVersion=$scalaJSVersion
+           |""".stripMargin
+      IO.write(file, contents)
+      Seq(file)
+    }.taskValue
 
 scalacOptions += "-deprecation"
 scalacOptions += "-feature"

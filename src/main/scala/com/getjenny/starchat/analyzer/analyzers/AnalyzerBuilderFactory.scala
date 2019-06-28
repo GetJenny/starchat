@@ -1,6 +1,7 @@
 package com.getjenny.starchat.analyzer.analyzers
 
 import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
+import com.getjenny.starchat.analyzer.analyzers.script_support.scalajs.ScalaJSAnalyzerBuilder
 import scalaz.Scalaz._
 
 trait AbstractAnalyzer {

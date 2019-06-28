@@ -1,6 +1,13 @@
-package com.getjenny.starchat.analyzer.analyzers
+package com.getjenny.starchat.analyzer.analyzers.script_support.scalajs
+
 import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
+import com.getjenny.starchat.analyzer.analyzers.AbstractAnalyzer
 import javax.script.{CompiledScript, ScriptEngine}
+
+final case class ScalaJSAnalyzerExcpetion(
+                                           private val message: String = "",
+                                           private val cause: Throwable = None.orNull
+                                         ) extends Exception(message, cause)
 
 class ScalaJSAnalyzer(compiledScript: CompiledScript) extends AbstractAnalyzer {
 
@@ -14,12 +21,16 @@ class ScalaJSAnalyzer(compiledScript: CompiledScript) extends AbstractAnalyzer {
     bindings.put("analyzersDataInternal", data)
 
     // evaluate script
-    compiledScript.eval(bindings) // can fail
+    try{
+      compiledScript.eval(bindings)
+    } catch {
+      case e: Exception => throw ScalaJSAnalyzerExcpetion("Evaluation error: " + e.getMessage, e.getCause)
+    }
 
     // get result
     val result = bindings.get("result") match {
       case r: Result => r
-      case _ => Result(0, data) // no result from the script
+      case _ => Result(0, data)
     }
 
     result
