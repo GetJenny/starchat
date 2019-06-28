@@ -6,7 +6,8 @@ package com.getjenny.starchat.entities
 
 import com.getjenny.analyzer.expressions.AnalyzersData
 
-case class AnalyzerEvaluateRequest(analyzer: String,
+case class AnalyzerEvaluateRequest(stateName: Option[String] = Some("playground"),
+                                   analyzer: String,
                                    query: String,
                                    data: Option[AnalyzersData],
                                    searchAlgorithm: Option[SearchAlgorithm.Value] = Some(SearchAlgorithm.DEFAULT),

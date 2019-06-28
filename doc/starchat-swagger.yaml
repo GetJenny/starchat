@@ -758,8 +758,8 @@ paths:
     get:
       tags:
         - admin
-      summary:
-      operationId: get_cluster_node
+      summary: retrieve informations about a cluster node
+      operationId: get_cluster_node_uuid
       description: retrieve informations about a cluster node
       parameters:
         - in: path
@@ -785,7 +785,7 @@ paths:
       tags:
         - admin
       summary: retrieve the dt loading status of a node
-      operationId: get_cluster_node
+      operationId: get_node_dt_update
       description: >-
         calculate if all the decision tables of the cluster were loaded by the node,
         can be used as an Healt Check on start-up before the registration of a new node on the load balancer
@@ -793,6 +793,12 @@ paths:
         - in: query
           name: verbose
           description: when set to true the list of indices is returned
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: strict
+          description: if true return 400 if the test fail
           required: false
           schema:
             type: boolean
@@ -811,7 +817,7 @@ paths:
       tags:
         - admin
       summary: set informations about the decision table update operations performed by a cluster node
-      operationId: post_cluster_node
+      operationId: post_node_dt_update
       description: set the alive timestamp for the node (automatically done when triggering a decision table reloading)
       responses:
         '200':
@@ -834,7 +840,7 @@ paths:
       tags:
         - admin
       summary: delete decision table loading records for dead nodex (automatically done by a starchat cron job)
-      operationId: delete_cluster_node
+      operationId: delete_node_dt_update
       description: remove from the alive nodes list those nodes with a too old timestamp
       responses:
         '200':
@@ -851,8 +857,8 @@ paths:
     get:
       tags:
         - customer
-      summary:
-      operationId: get_node_dt_update
+      summary: test if an index is up to date on all the cluster nodes
+      operationId: get_idx_node_dt_update
       description: >-
         retrieve the status of the loading process of a decision table on all the starchat's cluster nodes.
         The index must exists and the customer has write permissions on it.
@@ -864,6 +870,12 @@ paths:
           schema:
             type: string
           example: "index_getjenny_english_usecase0"
+        - in: query
+          name: strict
+          description: if true return 400 if the test fail
+          required: false
+          schema:
+           type: boolean
       responses:
         '200':
           description: request succesfully processed
@@ -1117,7 +1129,7 @@ paths:
             schema:
               $ref: '#/components/schemas/DTDocumentSearch'
         description: DecisionTable document with the query parameters
-  '/<index_name>/decisiontable/upload_csv':
+  '/<index_name>/decisiontable/upload/<format>':
     post:
       tags:
         - customer
@@ -1131,6 +1143,11 @@ paths:
           name: index_name
           description: name of the index
           required: true
+          schema:
+            type: string
+        - in: path
+          name: format
+          description: 'the file format, supported only: csv or json (json dump format)'
           schema:
             type: string
       requestBody:
@@ -2537,6 +2554,10 @@ components:
         - analyzer
         - query
       properties:
+        stateName:
+          type: string
+          description: a state name used by some analyzers, if unset playground will be used as default
+          example: "statename"
         analyzer:
           type: string
           description: the analyzer expression
@@ -2899,7 +2920,7 @@ components:
           description: dictionary with analyzers, the key is the state name
           additionalProperties:
             $ref: '#/components/schemas/DTAnalyzerItem'
-      example: {"analyzerMap": {"state_name_0": $ref:'#/components/schemas/DTAnalyzerItem'}}
+      example: {"analyzerMap": {"state_name_0": $ref: "#/components/schemas/DTAnalyzerItem" }}
     SearchDTDocument:
       type: object
       properties:
@@ -3029,26 +3050,6 @@ components:
           type: string
           description: a message in case of errors
           example: ""
-    DtActionResult:
-      type: object
-      description: "data returned by the actions executed by StarChat"
-      proprties:
-        success:
-          type: boolean
-          description: "true if the action succeeded, otherwise false"
-          example: true
-          default: false
-          code:
-            type: number
-            format: integer
-            description: "exit code for the action"
-            example: 0
-            default: 0
-          data:
-            type: object
-            desctiption: "a string to string, map for data returned by the action"
-            default: {}
-            example: {}
     ResponseRequestOut:
       type: object
       required:
@@ -3132,8 +3133,6 @@ components:
           format: double
           description: the score for the state
           example: 0.83
-        actionResult:
-          $ref: '#/components/schemas/DtActionResult'
     ResponseRequestOutOperationResult:
       type: object
       required:
@@ -3475,7 +3474,7 @@ components:
         offset:
           type: number
           format: integer
-          description:
+          description: the token offset
           example: 0
         length:
           type: number
@@ -3637,7 +3636,7 @@ components:
           example: "hello"
         synonyms:
           type: object
-          description: a set of synonyms with score
+          description: "a set of synonyms with score"
           additionalProperies:
             type: number
             format: double
@@ -4335,6 +4334,7 @@ components:
           * `qaPairAnsweredHistogram` -> time range histogram of the number of answered Q/A documents (only starchat agent)
           * `qaPairUnansweredHistogram` -> time range histogram of the number of unanswered Q/A documents (only starchat agent)
           * `qaMatchedStatesHistogram` -> histogram of matched states
+          * `qaMatchedStatesWithScoreHistogram` -> histogram of matched states with score
           * `avgFeedbackNotTransferredConvScoreOverTime` -> average score for the conversations (non-transferred only) on each time interval
           * `avgFeedbackTransferredConvScoreOverTime` -> average score for the conversations (transferred only) on each time interval
           * `avgAlgorithmNotTransferredConvScoreOverTime` -> average score for the conversations (non-transferred only) on each time interval, the scores are provided by an algorithm
@@ -5082,10 +5082,13 @@ components:
       required:
         - id
       properties:
-        id: String,
+        id:
+          type: string
+          description: "document id"
         tokenizer:
           type: string
-          description: "the tokenizer to use (see TokenizersSet data structure for the available tokenizers)"
+          description: >-
+            "the tokenizer to use (see TokenizersSet data structure for the available tokenizers)"
           example: "space_punctuation"
           default: "space_punctuation"
         commonOrSpecificSearchPrior:

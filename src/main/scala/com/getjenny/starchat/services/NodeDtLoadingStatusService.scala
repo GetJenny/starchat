@@ -26,6 +26,9 @@ import scala.collection.immutable.Map
 case class NodeDtLoadingStatusServiceException(message: String = "", cause: Throwable = None.orNull)
   extends Exception(message, cause)
 
+case class NodeDtLoadingHealthCheckException(message: String = "", cause: Throwable = None.orNull)
+  extends Exception(message, cause)
+
 object NodeDtLoadingStatusService extends AbstractDataService {
   val DT_NODES_STATUS_TIMESTAMP_DEFAULT : Long = -1
   override val elasticClient: SystemIndexManagementElasticClient.type = SystemIndexManagementElasticClient
@@ -110,7 +113,7 @@ object NodeDtLoadingStatusService extends AbstractDataService {
     }
   }
 
-  def nodeLoadingStatusAll(verbose: Boolean = false) : NodeLoadingAllDtStatus = {
+  def nodeLoadingStatusAll(verbose: Boolean = false, strict: Boolean = false) : NodeLoadingAllDtStatus = {
     val idxUpdateStatus = allDTReloadTimestamp(minTimestamp = Some(0)).map{ dtReloadTs =>
       val upToDate = analyzerService.analyzersMap.get(dtReloadTs.indexName) match {
         case Some(t) => t.lastReloadingTimestamp >= dtReloadTs.timestamp
@@ -119,20 +122,32 @@ object NodeDtLoadingStatusService extends AbstractDataService {
       (dtReloadTs.indexName, upToDate)
     }.toMap
 
+    val totalIndexes = idxUpdateStatus.length.toLong
+    val updatedIndexes = idxUpdateStatus.filter{case(_, status) => status}.length.toLong
+
+    val nodeReady = totalIndexes === updatedIndexes
+    if(strict && ! nodeReady) {
+      throw NodeDtLoadingHealthCheckException("node not ready")
+    }
+
     NodeLoadingAllDtStatus(
-      totalIndexes = idxUpdateStatus.length.toLong,
-      updatedIndexes = idxUpdateStatus.filter{case(_, status) => status}.length.toLong,
+      totalIndexes = totalIndexes,
+      updatedIndexes = updatedIndexes,
       indexes = if(verbose) idxUpdateStatus else Map.empty[String, Boolean]
     )
   }
 
-  def loadingStatus(index: String) : ClusterLoadingDtStatusIndex = {
+  def loadingStatus(index: String, strict: Boolean = false) : ClusterLoadingDtStatusIndex = {
     val aliveNodes = clusterNodesService.aliveNodes.nodes.map(_.uuid).toSet // all alive nodes
     val indexPushTimestamp = dtReloadService.dTReloadTimestamp(index) // push timestamp for the index
     val nodeDtLoadingStatus = // update operations for the index
       dtUpdateStatusByIndex(dtIndexName = index, minTs = indexPushTimestamp.timestamp).map(_.uuid).toSet
     val updatedSet = aliveNodes & nodeDtLoadingStatus
     val updateCompleted = updatedSet === aliveNodes
+
+    if(strict && ! updateCompleted) {
+      throw NodeDtLoadingHealthCheckException("index not ready")
+    }
 
     ClusterLoadingDtStatusIndex(index = index,
       totalAliveNodes = aliveNodes.length,

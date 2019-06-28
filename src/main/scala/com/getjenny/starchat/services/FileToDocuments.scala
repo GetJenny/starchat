@@ -1,24 +1,55 @@
 package com.getjenny.starchat.services
 
-import java.io.{File, FileReader}
+import java.io.{File, FileInputStream, FileReader}
 
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import breeze.io.CSVReader
-import com.getjenny.starchat.entities.{DTDocument, Term}
+import com.getjenny.starchat.entities.{DTDocument, SearchDTDocument, SearchDTDocumentsResults, Term}
 import com.getjenny.starchat.serializers.JsonSupport
 import scalaz.Scalaz._
 
 import scala.collection.immutable.{List, Map}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.util.{Failure, Success}
 
 case class FileToDocumentsException(message: String = "", cause: Throwable = None.orNull)
   extends Exception(message, cause)
 
 object FileToDocuments extends JsonSupport {
+
+  def getDTDocumentsFromJSON(log: LoggingAdapter, file: File): IndexedSeq[DTDocument] = {
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+
+    val stream = if(file.isAbsolute) {
+      new FileInputStream(file)
+    } else {
+      throw FileToDocumentsException("file path must be absolute: " + file.getPath)
+    }
+
+    val json = scala.io.Source.fromInputStream(stream).mkString
+
+    val listOfDocuments = Await.ready(Unmarshal(json).to[SearchDTDocumentsResults], 30.seconds).value match {
+      case Some(listOfDocumentsRes) => listOfDocumentsRes match {
+        case Success(dtDocumentResult) => dtDocumentResult
+        case Failure(e) =>
+          println("Error: " + e)
+          SearchDTDocumentsResults(total = 0, maxScore = .0f, hits = List.empty[SearchDTDocument])
+      }
+      case _ =>
+        println("Error: empty response")
+        SearchDTDocumentsResults(total = 0, maxScore = .0f, hits = List.empty[SearchDTDocument])
+    }
+
+    listOfDocuments.hits.map { doc =>
+        doc.document
+    }.toIndexedSeq
+  }
 
   def getDTDocumentsFromCSV(log: LoggingAdapter, file: File, skipLines: Int = 0, separator: Char = ','):
   IndexedSeq[DTDocument] = {

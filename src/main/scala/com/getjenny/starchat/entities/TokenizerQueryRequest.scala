@@ -5,7 +5,7 @@ package com.getjenny.starchat.entities
   */
 
 object TokenizersDescription {
-  val analyzers_map: Map[String, (String, String)] = Map[String, (String, String)](
+  val analyzersMap: Map[String, (String, String)] = Map[String, (String, String)](
     "raw" -> ("jenny_raw_analyzer", "lowercase"),
     "base" -> ("jenny_base_analyzer", "lowercase"),
     "space_punctuation" -> ("jenny_space_punctuation_analyzer", "lowercase"),

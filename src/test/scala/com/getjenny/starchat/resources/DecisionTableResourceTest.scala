@@ -77,7 +77,7 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
             HttpEntity(ContentTypes.`text/plain(UTF-8)`, input_data),
             Map("filename" -> "data.csv")))
 
-      Post(s"/index_getjenny_english_0/decisiontable/upload_csv", multipartForm) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+      Post(s"/index_getjenny_english_0/decisiontable/upload/csv", multipartForm) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[IndexDocumentListResult]
       }
@@ -427,7 +427,7 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
   }
 
   it should {
-    "return an HTTP code 202 when get_next_response request contains a non-existing state" in {
+    "return an HTTP code 400 when get_next_response request contains a non-existing state" in {
       val request = ResponseRequestIn(conversationId = "conv_12131",
         traversedStates = None,
         userInput = None,
@@ -440,7 +440,7 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
       )
 
       Post("/index_getjenny_english_0/get_next_response", request) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Accepted
+        status shouldEqual StatusCodes.BadRequest
         val response = responseAs[ResponseRequestOutOperationResult]
       }
     }

@@ -25,6 +25,7 @@ curl -v -H "Authorization: Basic $(echo -n 'admin:adminp4ssw0rd' | base64)" \
     \"qaPairAnsweredHistogram\",
     \"qaPairUnansweredHistogram\",
     \"qaMatchedStatesHistogram\",
+    \"qaMatchedStatesWithScoreHistogram\",
     \"avgFeedbackNotTransferredConvScoreOverTime\",
     \"avgFeedbackTransferredConvScoreOverTime\",
     \"avgAlgorithmNotTransferredConvScoreOverTime\",
@@ -34,8 +35,6 @@ curl -v -H "Authorization: Basic $(echo -n 'admin:adminp4ssw0rd' | base64)" \
     \"avgFeedbackAnswerScoreOverTime\",
     \"avgAlgorithmConvScoreOverTime\"
   ],
-  \"timestampGte\": 1553620582269,
-  \"timestampLte\": 1553620582258,
   \"minDocInBuckets\": 0
 }
 "

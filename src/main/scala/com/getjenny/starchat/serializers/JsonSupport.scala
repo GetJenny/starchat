@@ -223,7 +223,7 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val analyzerResponseItemFormat = jsonFormat5(TokenizerResponseItem)
   implicit val analyzerResponseFormat = jsonFormat1(TokenizerResponse)
   implicit val analyzerDataFormat = jsonFormat2(AnalyzersData)
-  implicit val analyzerEvaluateRequestFormat = jsonFormat5(AnalyzerEvaluateRequest)
+  implicit val analyzerEvaluateRequestFormat = jsonFormat6(AnalyzerEvaluateRequest)
   implicit val analyzerEvaluateResponseFormat = jsonFormat4(AnalyzerEvaluateResponse)
   implicit val spellcheckTokenSuggestionsFormat = jsonFormat3(SpellcheckTokenSuggestions)
   implicit val spellcheckTokenFormat = jsonFormat4(SpellcheckToken)

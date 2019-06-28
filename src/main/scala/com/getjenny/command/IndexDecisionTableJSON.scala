@@ -58,7 +58,7 @@ object IndexDecisionTableJSON extends JsonSupport {
         case _ =>
           println("Error: empty response")
           SearchDTDocumentsResults(total = 0, maxScore = .0f, hits = List.empty[SearchDTDocument])
-      }
+    }
 
     val httpHeader: immutable.Seq[HttpHeader] = if(params.headerKv.nonEmpty) {
       val headers: Seq[RawHeader] = params.headerKv.map(x => {

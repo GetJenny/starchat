@@ -7,7 +7,7 @@ package com.getjenny.starchat.services
 import java.util.concurrent.ConcurrentHashMap
 
 import akka.event.{Logging, LoggingAdapter}
-import com.getjenny.analyzer.expressions.{AnalyzersData, AnalyzersDataInternal}
+import com.getjenny.analyzer.expressions.{AnalyzersData, AnalyzersDataInternal, Context}
 import com.getjenny.starchat.SCActorSystem
 import com.getjenny.starchat.analyzer.analyzers.{AbstractAnalyzer, AnalyzerBuilderFactory, ScriptEngines, StarChatAnalyzer}
 import com.getjenny.starchat.entities._
@@ -306,7 +306,9 @@ object AnalyzerService extends AbstractDataService {
             // prepare search result for search analyzer
             decisionTableService.searchDtQueries(indexName, analyzerRequest).map(searchRes => {
               val analyzersInternalData = decisionTableService.resultsToMap(searchRes)
-              val dataInternal = AnalyzersDataInternal(traversedStates = data.traversedStates,
+              val dataInternal = AnalyzersDataInternal(
+                context = Context(indexName = indexName, stateName = analyzerRequest.stateName.getOrElse("playground")),
+                traversedStates = data.traversedStates,
                 extractedVariables = data.extractedVariables, data = analyzersInternalData)
               val evalRes = result.evaluate(analyzerRequest.query, dataInternal)
               val returnData = if(evalRes.data.extractedVariables.nonEmpty || evalRes.data.traversedStates.nonEmpty) {

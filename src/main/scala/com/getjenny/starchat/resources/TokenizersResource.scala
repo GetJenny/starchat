@@ -50,7 +50,7 @@ trait TokenizersResource extends StarChatResource {
               authorizeAsync(_ =>
                 authenticator.hasPermissions(user, indexName, Permissions.read)) {
                 val analyzers_description: Map[String, String] =
-                  TokenizersDescription.analyzers_map.map { case (name, description) =>
+                  TokenizersDescription.analyzersMap.map { case (name, description) =>
                     (name, description._2)
                   }
                 val result: Option[Map[String, String]] = Option(analyzers_description)

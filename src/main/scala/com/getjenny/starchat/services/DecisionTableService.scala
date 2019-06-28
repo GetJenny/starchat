@@ -886,4 +886,14 @@ object DecisionTableService extends AbstractDataService {
     }).toList
     IndexDocumentListResult(data = indexDocumentListResult)
   }
+
+  def indexJSONFileIntoDecisionTable(indexName: String, file: File):
+  Future[IndexDocumentListResult] = Future {
+    val documents: IndexedSeq[DTDocument] = FileToDocuments.getDTDocumentsFromJSON(log = log, file = file)
+
+    val indexDocumentListResult = documents.map(dtDocument => {
+      create(indexName, dtDocument, 0)
+    }).toList
+    IndexDocumentListResult(data = indexDocumentListResult)
+  }
 }

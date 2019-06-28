@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -e
 
@@ -13,7 +13,7 @@ shift
 
 cmd="$@"
 
-until curl -k ${host}:${port}
+until nc -z ${host} ${port}
 do
   echo "Service is still unavailable on: ${host}:${port}"
   sleep 1

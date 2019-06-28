@@ -1,8 +1,9 @@
 language: scala
 scala:
    - 2.12.8
+   - 2.13.0
 jdk:
-   - oraclejdk11
+   - openjdk11
 sudo: required
 
 services:

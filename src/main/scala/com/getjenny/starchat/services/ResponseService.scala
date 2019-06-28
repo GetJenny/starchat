@@ -6,7 +6,7 @@ package com.getjenny.starchat.services
 
 import akka.event.{Logging, LoggingAdapter}
 import com.getjenny.analyzer.analyzers._
-import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
+import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Context, Result}
 import com.getjenny.starchat.SCActorSystem
 import com.getjenny.starchat.entities.{ResponseRequestOut, _}
 import com.getjenny.starchat.services.esclient.DecisionTableElasticClient
@@ -85,10 +85,13 @@ object ResponseService extends AbstractDataService {
     // prepare search result for search analyzer
     val analyzerEvaluateRequest = AnalyzerEvaluateRequest(analyzer = "", query = userText, data = None,
       searchAlgorithm = request.searchAlgorithm, evaluationClass = request.evaluationClass)
-    val searchResAnalyzers =
-      decisionTableService.searchDtQueries(indexName, analyzerEvaluateRequest).map(searchRes => {
+    val searchResAnalyzers = decisionTableService
+      .searchDtQueries(indexName, analyzerEvaluateRequest).map(searchRes => { // map to wait the future value
         val analyzersInternalData = decisionTableService.resultsToMap(searchRes)
-        AnalyzersDataInternal(extractedVariables = variables, traversedStates = traversedStates,
+        AnalyzersDataInternal(
+          context = Context(indexName = indexName, stateName = ""), // stateName is not important here
+          extractedVariables = variables,
+          traversedStates = traversedStates,
           data = analyzersInternalData)
       })
 
@@ -123,7 +126,10 @@ object ResponseService extends AbstractDataService {
         }.map { case (stateName, runtimeAnalyzerItem) =>
         val analyzerEvaluation = runtimeAnalyzerItem.analyzer.analyzer match {
           case Some(starchatAnalyzer) =>
-            Try(starchatAnalyzer.evaluate(userText, data = data)) match {
+            val analyzersDataInternal: AnalyzersDataInternal =  data.copy(
+              context = Context(indexName = indexName, stateName = stateName)
+            )
+            Try(starchatAnalyzer.evaluate(userText, data = analyzersDataInternal)) match {
               case Success(evalRes) =>
                 log.debug("ResponseService: Evaluation of State(" +
                   stateName + ") Query(" + userText + ") Score(" + evalRes.toString + ")")

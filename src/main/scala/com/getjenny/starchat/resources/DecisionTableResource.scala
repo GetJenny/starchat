@@ -18,6 +18,7 @@ import scalaz.Scalaz._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
 trait DecisionTableResource extends StarChatResource {
@@ -26,6 +27,7 @@ trait DecisionTableResource extends StarChatResource {
   private[this] val analyzerService: AnalyzerService.type = AnalyzerService
   private[this] val responseService: ResponseService.type = ResponseService
   private[this] val dtReloadService: DtReloadService.type = DtReloadService
+  private[this] val fileTypeRegex: Regex = ("^(csv|json)$").r
 
   def decisionTableRoutesAllRoutes: Route = handleExceptions(routesExceptionHandler) {
     pathPrefix(indexRegex ~ Slash ~ "decisiontable" ~ Slash ~ "all") { indexName =>
@@ -55,17 +57,25 @@ trait DecisionTableResource extends StarChatResource {
     }
   }
 
-  def decisionTableUploadCSVRoutes: Route = handleExceptions(routesExceptionHandler) {
-    pathPrefix(indexRegex ~ Slash ~ "decisiontable" ~ Slash ~ "upload_csv") { indexName =>
+  def decisionTableUploadFilesRoutes: Route = handleExceptions(routesExceptionHandler) {
+    pathPrefix(indexRegex ~ Slash ~ "decisiontable" ~ Slash ~ "upload" ~ Slash ~ fileTypeRegex) { (indexName, fileType) =>
       pathEnd {
         post {
           authenticateBasicAsync(realm = authRealm, authenticator = authenticator.authenticator) { user =>
             authorizeAsync(_ =>
               authenticator.hasPermissions(user, indexName, Permissions.write)) {
-              storeUploadedFile("csv", tempDestination(".csv")) {
+              storeUploadedFile(fileType, tempDestination("." + fileType)) {
                 case (_, file) =>
                   val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker(callTimeout = 60.seconds)
-                  onCompleteWithBreaker(breaker)(decisionTableService.indexCSVFileIntoDecisionTable(indexName, file, 0)) {
+                  onCompleteWithBreaker(breaker)(
+                    if (fileType == "csv") {
+                      decisionTableService.indexCSVFileIntoDecisionTable(indexName, file, 0)
+                    } else if (fileType == "json") {
+                      decisionTableService.indexJSONFileIntoDecisionTable(indexName, file)
+                    } else {
+                      throw DecisionTableServiceException("Bad or unsupported file format: " + fileType)
+                    }
+                  ) {
                     case Success(t) =>
                       file.delete()
                       completeResponse(StatusCodes.OK, StatusCodes.BadRequest, Option {
@@ -225,11 +235,16 @@ trait DecisionTableResource extends StarChatResource {
                                 })
                             }
                           )
-                        case e@(_: ResponseServiceNoResponseException | _: AnalyzerEvaluationException) =>
+                        case e@(_: ResponseServiceNoResponseException) =>
                           val message = "index(" + indexName + ") DecisionTableResource: " +
-                            "Unable to complete the request: " + e.getMessage
+                            "No response: " + e.getMessage
+                          log.info(message = message)
+                          completeResponse(StatusCodes.NoContent)
+                        case e@(_: AnalyzerEvaluationException) =>
+                          val message = "index(" + indexName + ") DecisionTableResource: " +
+                            "Unable to complete the request, due to analyzer: " + e.getMessage
                           log.error(message = message)
-                          completeResponse(StatusCodes.NoContent,
+                          completeResponse(StatusCodes.BadRequest,
                             Option {
                               ResponseRequestOutOperationResult(
                                 ReturnMessageData(code = 110, message = message),
@@ -238,11 +253,11 @@ trait DecisionTableResource extends StarChatResource {
                                 })
                             }
                           )
-                        case e@(_: ResponseServiceDocumentNotFoundException | _: AnalyzerEvaluationException) =>
+                        case e@(_: ResponseServiceDocumentNotFoundException) =>
                           val message = "index(" + indexName + ") DecisionTableResource: " +
-                            "Unable to complete the request: " + e.getMessage
+                            "Requested document not found: " + e.getMessage
                           log.error(message = message)
-                          completeResponse(StatusCodes.Accepted,
+                          completeResponse(StatusCodes.BadRequest,
                             Option {
                               ResponseRequestOutOperationResult(
                                 ReturnMessageData(code = 111, message = message),

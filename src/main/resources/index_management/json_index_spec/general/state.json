@@ -43,38 +43,47 @@
               },
               "base": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_base_analyzer"
               },
               "stop": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_stop_analyzer"
               },
               "stem": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_stem_analyzer"
               },
               "shingles_2": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_shingles_2_analyzer"
               },
               "stemmed_shingles_2": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_stemmed_shingles_2_analyzer"
               },
               "shingles_3": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_shingles_3_analyzer"
               },
               "stemmed_shingles_3": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_stemmed_shingles_3_analyzer"
               },
               "shingles_4": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_shingles_4_analyzer"
               },
               "stemmed_shingles_4": {
                 "type": "text",
+                "fielddata": true,
                 "analyzer": "jenny_stemmed_shingles_4_analyzer"
               },
               "ngram_2": {
