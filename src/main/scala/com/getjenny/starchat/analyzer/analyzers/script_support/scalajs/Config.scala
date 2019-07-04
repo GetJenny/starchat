@@ -2,10 +2,10 @@ package com.getjenny.starchat.analyzer.analyzers.script_support.scalajs
 
 import java.util.Properties
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 
 object Config {
-  protected val config: Config = ConfigFactory.load().getConfig("scalajs.support")
+  protected val config = ConfigFactory.load().getConfig("scalajs.support")
 
   val libCache = config.getString("libCache")
 

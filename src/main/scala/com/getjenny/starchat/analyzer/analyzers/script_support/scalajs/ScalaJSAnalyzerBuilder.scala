@@ -12,8 +12,11 @@ import scala.reflect.io
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.io.AbstractFile
-import scala.tools.nsc.reporters.ConsoleReporter
+import scala.tools.nsc.reporters.StoreReporter
 import scala.util.{Failure, Success, Try}
+
+class CompilationFailedException(val messages: Iterable[(Int, String)])
+  extends Exception(messages.map(message => message._1 + ". " + message._2).mkString("\n"))
 
 object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
@@ -67,7 +70,7 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
   private[this] class Compiler {
     private[this] val settings = new Settings()
     settings.processArgumentString("-Ydebug -Ypartial-unification -Ylog-classpath")
-    private[this] val reporter = new ConsoleReporter(settings)
+    private[this] val reporter = new StoreReporter()
 
     private[this] val compiler = GlobalInit.initGlobal(settings, reporter, compilerLibraries)
 
@@ -88,7 +91,11 @@ object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
       run.compileFiles(List(scalaJSFile))
 
-      if(target.iterator.isEmpty) throw new Exception("compiler's output was empty")
+      if(reporter.hasWarnings || reporter.hasErrors){
+        val errors = reporter.infos.map(info => (info.pos.line, info.msg))
+        throw new CompilationFailedException(errors)
+      }
+      if(target.iterator.isEmpty) throw new Exception("Compiler's output was empty")
 
       val sjsirFiles = for {
         x <- target.iterator.to[collection.immutable.Traversable]
