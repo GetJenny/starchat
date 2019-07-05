@@ -57,7 +57,7 @@ class W2VEarthMoversCosineDistanceStateAtomic(val arguments: List[String], restr
   }
 
   val queriesVectors: List[TextTerms] = queriesSentences match {
-    case Some(sentences) => sentences.queries.map(item => item)
+    case Some(sentences) => sentences.queriesTerms.map(item => item)
     case _ => List.empty[TextTerms]
   }
 

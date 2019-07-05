@@ -54,7 +54,7 @@ class W2VEarthMoversEuclideanDistanceStateAtomic(val arguments: List[String], re
   }
 
   val queriesVectors: List[TextTerms] = queriesSentences match {
-    case Some(sentences) => sentences.queries.map(item => item)
+    case Some(sentences) => sentences.queriesTerms.map(item => item)
     case _ => List.empty[TextTerms]
   }
   val isEvaluateNormalized: Boolean = true

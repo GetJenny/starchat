@@ -2,7 +2,7 @@ version: "3.4"
 services:
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.1.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
     restart: unless-stopped
     command: elasticsearch
     ports:

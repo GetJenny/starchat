@@ -48,7 +48,7 @@ class W2VCosineStateAtomic(val arguments: List[String], restrictedArgs: Map[Stri
   }
 
   val queryTerms: List[TextTerms] = querySentences match {
-    case Some(t) => t.queries
+    case Some(t) => t.queriesTerms
     case _ => List.empty[TextTerms]
   }
 

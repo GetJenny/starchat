@@ -24,7 +24,7 @@ libraryDependencies ++= {
   val AkkaHttpVersion	= "10.1.8"
   val AkkaVersion	= "2.5.23"
   val BreezeVersion	= "0.13.2"
-  val ESClientVersion	= "7.1.1"
+  val ESClientVersion	= "7.2.0"
   val LogbackVersion	= "1.2.3"
   val RoundeightsHasherVersion	= "1.2.0"
   val ScalatestVersion	= "3.0.5"
@@ -118,8 +118,6 @@ dockerCommands := Seq(
   Cmd("RUN", "apk", "update"),
   Cmd("RUN", "apk", "add", "bash"),
   Cmd("RUN", "apk", "add", "curl"),
-  //Cmd("RUN", "apk", "add", "gcompat"),
-  Cmd("RUN", "apk", "add", "libc6-compat"),
   Cmd("RUN", "ln", "-sf", "/lib/libc.musl-x86_64.so.1", "/lib/ld-linux-x86-64.so.2"),
   Cmd("RUN", "addgroup", "-S", "starchat", "&&", "adduser", "-S", "starchat", "-G", "starchat"),
   Cmd("USER", "starchat:starchat"),
