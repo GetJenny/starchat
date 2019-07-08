@@ -25,7 +25,7 @@ object GlobalInit {
       override def findClass(name: String): Class[_] = {
         def findClassInLibs(): Option[AbstractFile] = {
           val parts = name.split('.')
-          libs
+          val libsMap = libs
             .map(dir => {
               Try {
                 parts
@@ -34,7 +34,7 @@ object GlobalInit {
                   .lookupName(parts.last + ".class", directory = false)
               } getOrElse null
             })
-            .find(_ != null)
+          libsMap.find(_ != null)
         }
 
         val res = classCache.getOrElseUpdate(
@@ -57,16 +57,18 @@ object GlobalInit {
     }
   }
 
-  private[this] final def lookupPath(base: AbstractFile)(pathParts: Seq[String], directory: Boolean): AbstractFile = {
+  private[this] final def lookupPath(base: AbstractFile)(pathParts: Seq[String], directory: Boolean): Option[AbstractFile] = {
     var file: AbstractFile = base
     for (dirPart <- pathParts.init) {
       file = file.lookupName(dirPart, directory = true)
       if (file == null)
-        return null
+        return None
     }
 
-    file.lookupName(pathParts.last, directory = directory)
+    Option(file.lookupName(pathParts.last, directory = directory))
+
   }
+
 
   private[this] def buildClassPath(absFile: AbstractFile) =
     new VirtualDirectoryClassPath(new VirtualDirectory(absFile.name, None) {
@@ -77,12 +79,12 @@ object GlobalInit {
       override def subdirectoryNamed(name: String) = absFile.subdirectoryNamed(name)
     }) {
       override def getSubDir(packageDirName: String): Option[AbstractFile] = {
-        Option(lookupPath(absFile)(packageDirName.split('/'), directory = true))
+        lookupPath(absFile)(packageDirName.split('/'), directory = true)
       }
 
       override def findClassFile(className: String): Option[AbstractFile] = {
         val relativePath = FileUtils.dirPath(className) + ".class"
-        Option(lookupPath(absFile)(relativePath.split('/'), directory = false))
+        lookupPath(absFile)(relativePath.split('/'), directory = false)
       }
     }
 

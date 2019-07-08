@@ -13,13 +13,13 @@ import java.util.zip.{ZipEntry, ZipInputStream}
 import com.google.common.io.Files
 import org.slf4j.LoggerFactory
 import org.xerial.snappy.Snappy
+import scalaz.Scalaz._
 import upickle.default._
 import xerial.larray._
 import xerial.larray.mmap.MMapMode
 
 import scala.io.Source
 import scala.reflect.io.Streamable
-//import scala.scalajs.niocharset.StandardCharsets
 
 case class FlatFile(path: String, offset: Long, compressedSize: Int, origSize: Int)
 
@@ -30,7 +30,10 @@ class FlatFileSystem(data: MappedLByteArray, val jars: Seq[FlatJar], val index: 
   def exists(path: String) = index.contains(path)
 
   def load(flatJar: FlatJar, path: String): Array[Byte] = {
-    load(jars.find(_.name == flatJar.name).get.files.find(_.path == path).get)
+    load(jars.find(_.name === flatJar.name)
+      .getOrElse(throw new Exception(s"""FlatJar "${flatJar.name}" not found in FlatFileSystem"""))
+      .files.find(_.path === path)
+      .getOrElse(throw new Exception(s"""Path "$path" not found in FlatFileSystem FlatJar ${flatJar.name}""")))
   }
 
   def load(path: String): Array[Byte] = {
@@ -82,7 +85,7 @@ object FlatFileSystem {
     // if metadata already exists, read it in
     val existingJars = if (location.resolve("index.json").toFile.exists()) readMetadata(location) else Seq.empty[FlatJar]
 
-    val newJars = jars.filterNot(p => existingJars.exists(_.name == p._1))
+    val newJars = jars.filterNot{ case (name, _) => existingJars.exists(_.name === name)}
 
     // make location path
     location.toFile.mkdirs()
@@ -92,14 +95,14 @@ object FlatFileSystem {
     var offset   = dataFile.length()
 
     // read through all new JARs, append contents to data and create metadata
-    val addedJars = newJars.map { jarPath =>
-      val name = jarPath._1
+    val addedJars = newJars.map { case (jarName, jarInputStream) =>
+      val name = jarName
       log.debug(s"Extracting JAR $name")
-      val fis       = jarPath._2
+      val fis       = jarInputStream
       val jarStream = new ZipInputStream(fis)
       val entries = Iterator
         .continually(jarStream.getNextEntry)
-        .takeWhile(_ != null)
+        .takeWhile(_ => jarStream.available > 0)
         .filter(validFile)
 
       val files = entries.map { entry =>

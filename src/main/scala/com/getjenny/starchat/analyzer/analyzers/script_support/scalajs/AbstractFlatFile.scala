@@ -7,6 +7,8 @@ package com.getjenny.starchat.analyzer.analyzers.script_support.scalajs
 
 import java.io.{ByteArrayInputStream, File, InputStream, OutputStream}
 
+import scalaz.Scalaz._
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.io._
@@ -17,7 +19,7 @@ class AbstractFlatFile(flatFile: FlatFile, flatJar: FlatJar, ffs: FlatFileSystem
   override val name: String            = path.split('/').last
   override def absolute: AbstractFile  = this
   override def container: AbstractFile = NoAbstractFile
-  override def file: File              = null
+  override def file: File              = unsupported()
   override def create(): Unit          = unsupported()
   override def delete(): Unit          = unsupported()
   override def isDirectory: Boolean    = false
@@ -32,18 +34,18 @@ class AbstractFlatFile(flatFile: FlatFile, flatJar: FlatJar, ffs: FlatFileSystem
 
   override def output: OutputStream                                                = unsupported()
   override def iterator: Iterator[AbstractFile]                                    = Iterator.empty
-  override def lookupName(name: String, directory: Boolean): AbstractFile          = null
-  override def lookupNameUnchecked(name: String, directory: Boolean): AbstractFile = null
+  override def lookupName(name: String, directory: Boolean): AbstractFile          = unsupported()
+  override def lookupNameUnchecked(name: String, directory: Boolean): AbstractFile = unsupported()
 
   override def toString(): String = s"AFF($name)"
 }
 
 class AbstractFlatDir(val path: String, val children: ArrayBuffer[AbstractFile] = ArrayBuffer.empty) extends AbstractFile {
-  private lazy val files: Map[String, AbstractFile] = children.map(c => c.name -> c)(collection.breakOut)
+  private[this] lazy val files: Map[String, AbstractFile] = children.map(c => c.name -> c)(collection.breakOut)
   override val name: String                         = path.split('/').last
   override def absolute: AbstractFile               = this
   override def container: AbstractFile              = NoAbstractFile
-  override def file: File                           = null
+  override def file: File                           = unsupported()
   override def create(): Unit                       = unsupported()
   override def delete(): Unit                       = unsupported()
   override def isDirectory: Boolean                 = true
@@ -58,7 +60,7 @@ class AbstractFlatDir(val path: String, val children: ArrayBuffer[AbstractFile] 
   }
 
   override def lookupName(name: String, directory: Boolean): AbstractFile = {
-    files.get(name).filter(_.isDirectory == directory).orNull
+    files.get(name).filter(_.isDirectory === directory).orNull
   }
 
   override def toString(): String = s"AFD($path, ${children.map(_.toString).mkString(",")})\n\n"

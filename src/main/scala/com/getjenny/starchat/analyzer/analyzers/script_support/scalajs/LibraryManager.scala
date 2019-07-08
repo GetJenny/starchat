@@ -11,6 +11,7 @@ import java.nio.file.Paths
 import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.io.{RelativeVirtualFile, _}
 import org.slf4j.LoggerFactory
+import scalaz.Scalaz._
 
 import scala.tools.nsc.io.AbstractFile
 
@@ -19,7 +20,7 @@ class JarEntryIRFile(outerPath: String, val relativePath: String)
     with RelativeVirtualFile
 
 class VirtualFlatJarFile(flatJar: FlatJar, ffs: FlatFileSystem) extends VirtualJarFile {
-  override def content: Array[Byte] = null
+  override def content: Array[Byte] = Array.empty
   override def path: String         = flatJar.name
   override def exists: Boolean      = true
 
@@ -47,7 +48,7 @@ object LibraryManager {
     val jarFiles = baseLibs.map { name =>
       val stream = getClass.getResourceAsStream(name)
       log.debug(s"Loading resource $name")
-      if (stream == null) {
+      if (stream.available === 0) {
         throw new Exception(s"Classpath loading failed, jar $name not found")
       }
       name -> stream
@@ -70,9 +71,9 @@ object LibraryManager {
     val ffs    = FlatFileSystem.build(Paths.get(Config.libCache), commonJars)
     val absffs = new AbstractFlatFileSystem(ffs)
 
-    val commonJarFlatFiles = commonJars.map(jar => (jar._1, absffs.roots(jar._1))).toMap
+    val commonJarFlatFiles = commonJars.map{ case (jars, _) => (jars, absffs.roots(jars))}.toMap
 
-    val commonLibs = commonJars.map { case (jar, _) => jar -> commonJarFlatFiles(jar) }
+    val commonLibs = commonJars.map { case (jars, _) => jars -> commonJarFlatFiles(jars) }
 
     (commonLibs, ffs)
 

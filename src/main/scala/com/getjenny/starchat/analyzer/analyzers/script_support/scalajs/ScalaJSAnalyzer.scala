@@ -4,6 +4,8 @@ import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
 import com.getjenny.starchat.analyzer.analyzers.AbstractAnalyzer
 import javax.script.{CompiledScript, ScriptEngine}
 
+import scala.util.{Failure, Success, Try}
+
 final case class ScalaJSAnalyzerExcpetion(
                                            private val message: String = "",
                                            private val cause: Throwable = None.orNull
@@ -21,10 +23,9 @@ class ScalaJSAnalyzer(compiledScript: CompiledScript) extends AbstractAnalyzer {
     bindings.put("analyzersDataInternal", data)
 
     // evaluate script
-    try{
-      compiledScript.eval(bindings)
-    } catch {
-      case e: Exception => throw ScalaJSAnalyzerExcpetion("Evaluation error: " + e.getMessage, e.getCause)
+    Try(compiledScript.eval(bindings)) match {
+      case Failure(e) => throw ScalaJSAnalyzerExcpetion("Evaluation error: " + e.getMessage, e.getCause)
+      case Success(_) => Unit
     }
 
     // get result

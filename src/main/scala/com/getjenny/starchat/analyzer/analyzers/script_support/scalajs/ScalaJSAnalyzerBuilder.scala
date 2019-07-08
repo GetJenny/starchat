@@ -16,7 +16,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.util.{Failure, Success, Try}
 
 class CompilationFailedException(val messages: Iterable[(Int, String)])
-  extends Exception(messages.map(message => message._1 + ". " + message._2).mkString("\n"))
+  extends Exception(messages.map{ case (row, cause) => row + ". " + cause}.mkString("\n"))
 
 object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
 
