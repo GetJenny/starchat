@@ -501,7 +501,8 @@ object DecisionTableService extends AbstractDataService {
         boostExactMatchFactor = Option {
           elasticClient.boostExactMatchFactor
         },
-        state = None: Option[String], queries = Option {
+        state = None: Option[String],
+        queries = Option {
           analyzerEvaluateRequest.query
         },
         searchAlgorithm = analyzerEvaluateRequest.searchAlgorithm,
