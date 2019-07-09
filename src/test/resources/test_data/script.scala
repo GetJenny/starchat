@@ -1,4 +1,4 @@
-
+import scala.scalajs.js.Dynamic.{ global => g }
 
 object ScalaJSAnalyzer {
 
