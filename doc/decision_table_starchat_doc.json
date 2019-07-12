@@ -22,7 +22,7 @@
          "document" : {
             "failureValue" : "",
             "state" : "call_operator",
-            "analyzer" : "band(bor(keyword(\"call\"),keyword(\"talk\"),keyword(\"speak\")),keyword(\"operator\"))",
+            "analyzer" : "band(bor(vOneKeyword(\"call\"),vOneKeyword(\"talk\"),vOneKeyword(\"speak\")),vOneKeyword(\"operator\"))",
             "maxStateCount" : 0,
             "bubble" : "No operator is available at the moment, sorry. You just have me.",
             "queries" : [
@@ -43,7 +43,7 @@
          "document" : {
             "failureValue" : "",
             "state" : "code_78",
-            "analyzer" : "band(keyword(\"code\"),keyword(\"78\"))",
+            "analyzer" : "band(vOneKeyword(\"code\"),vOneKeyword(\"78\"))",
             "queries" : [],
             "bubble" : "If elasticsearch complain about the size of the virtual memory:\n<br>\n<code>max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]</code>\n<br>\n<code>elastisearch exited with code 78</code>\n<br>\nrun:\n<br>\n<code>Sysctl -w vm.max_map_count=262144</code>",
             "maxStateCount" : 0,
@@ -61,7 +61,7 @@
             "maxStateCount" : 0,
             "bubble" : "To contribute to <a href=\"http://git.io/*chat\">StarChat</a>, please send us a pull request from your fork of this repository.\n<br>Our concise contribution guideline contains the bare minimum requirements of the code contributions.\n<br>Before contributing (or opening issues), you might want to email us at starchat@getjenny.com.",
             "state" : "contribute",
-            "analyzer" : "bor(keyword(\"contribute\"))",
+            "analyzer" : "bor(vOneKeyword(\"contribute\"))",
             "stateData" : {},
             "executionOrder" : 1,
             "actionInput" : {},
@@ -76,7 +76,7 @@
             "bubble" : "To create Elasticsearch indexes:<br> <code>./docker-starchat/starchat/scripts/api_test/postIndexManagementCreate.sh</code>",
             "queries" : [],
             "state" : "create_es_indexes",
-            "analyzer" : "band(keyword(\"create\"), bor(keyword(\"index.*\"), keyword(\"indic.*\")))",
+            "analyzer" : "band(vOneKeyword(\"create\"), bor(vOneKeyword(\"index.*\"), vOneKeyword(\"indic.*\")))",
             "failureValue" : "",
             "actionInput" : {},
             "action" : "",
@@ -98,13 +98,13 @@
             "queries" : [],
             "bubble" : "Run\n<br>\n<code>./docker-starchat/starchat/scripts/api_test/postIndexManagementCreate.sh</code>\n<br>\n(to delete previously created indexes: <code>./docker-starchat/starchat/scripts/api_test/deleteIndexManagement.sh</code>)\n<br>\nNow ask me how to <em>load configuration file</em>.\n",
             "maxStateCount" : 0,
-            "analyzer" : "band(keyword(\"create\"), keyword(\"elastic.*\"),  bor(keyword(\"index\"),  keyword(\"indices\"),  keyword(\"indeces\"),  keyword(\"indexes\")))",
+            "analyzer" : "band(vOneKeyword(\"create\"), vOneKeyword(\"elastic.*\"),  bor(vOneKeyword(\"index\"),  vOneKeyword(\"indices\"),  vOneKeyword(\"indeces\"),  vOneKeyword(\"indexes\")))",
             "state" : "create_es_indices"
          }
       },
       {
          "document" : {
-            "analyzer" : "band(keyword(\"delete\"), bor(keyword(\"index.*\"), keyword(\"indic.*\")))",
+            "analyzer" : "band(vOneKeyword(\"delete\"), bor(vOneKeyword(\"index.*\"), vOneKeyword(\"indic.*\")))",
             "state" : "delete_es_indexes",
             "maxStateCount" : 0,
             "bubble" : "To delete previously created indexes:<br><code>./docker-starchat/starchat/scripts/api_test/deleteIndexManagement.sh</code>.",
@@ -129,7 +129,7 @@
             "queries" : [],
             "maxStateCount" : 0,
             "bubble" : "In the terminal, go into the root directory of StarChat, and generate a packet distribution:\n<br>\n<code>sbt dist</code>\n<br>\nThen enter the directory docker-starchat:\n<br>\n<code>cd  docker-starchat</code>\n<br>\nYou will get a message like <code>Your package is ready in ...../target/universal/starchat-4ee.... .zip</code>.\n<br>Extract the packet into the docker-starchat folder:\n<br>\n<code>unzip ../target/universal/starchat-4eee.....zip</code><br>\n<code>ln -s starchat-4ee..../  starchat</code>\n<br>\nNow launch the dockers:\n<br>\n<code>docker-compose up -d</code>\n<br>\nIf you have problems, tell me the output (eg <em>elastisearch exited with code 78</em>) otherwise type <em>create elasticsearch indices</em>.",
-            "analyzer" : "band(keyword(\"docker\"), keyword(\"install.*\"))",
+            "analyzer" : "band(vOneKeyword(\"docker\"), vOneKeyword(\"install.*\"))",
             "state" : "docker_install",
             "failureValue" : ""
          }
@@ -159,7 +159,7 @@
                "cannot access account",
                "problem access account"
             ],
-            "analyzer" : "or(and(or(keyword(\"problem.*\"),keyword(\"issue.*\"),keyword(\"trouble.*\")),keyword(\"account\")))",
+            "analyzer" : "or(and(or(vOneKeyword(\"problem.*\"),vOneKeyword(\"issue.*\"),vOneKeyword(\"trouble.*\")),vOneKeyword(\"account\")))",
             "state" : "further_details_access_question",
             "executionOrder" : 1,
             "stateData" : {
@@ -180,7 +180,7 @@
       {
          "document" : {
             "state" : "help",
-            "analyzer" : "band(keyword(\"help\"))",
+            "analyzer" : "band(vOneKeyword(\"help\"))",
             "queries" : [],
             "maxStateCount" : 0,
             "bubble" : "Ask me questions like... how to install? ...how to contribute? ...is it open source? ...how to install with docker? ...how to make a standalone installation? ...how to index data?",
@@ -196,7 +196,7 @@
       {
          "score" : 0,
          "document" : {
-            "analyzer" : "band(bor(keyword(\"index\"),keyword(\"load\")), keyword(\"analyzer\"))",
+            "analyzer" : "band(bor(vOneKeyword(\"index\"),vOneKeyword(\"load\")), vOneKeyword(\"analyzer\"))",
             "state" : "index_analyzer",
             "bubble" : "If you want to re-index the analyzer fields:<br><code>./docker-starchat/starchat/scripts/api_test/postAnalyzer.sh</code>.",
             "maxStateCount" : 0,
@@ -221,7 +221,7 @@
             "maxStateCount" : 0,
             "bubble" : "There are three kind of data on starchat:\n<ul>\n  <li>Knowledge Base: contains a dataset wit Questions/Answers and is used by the question/answer recommender.</li>\n  <li>Decision Table:  stores the behaviour of the chatbot</li>\n  <li>Terms Index: stores the vector representation of terms, this data are needed to use some of the StarChat's semantic analysis features</li>\n</ul>\n\nTo index data into the Knowledge Base see: <a href=\"https://getjenny.github.io/starchat-doc/#configuration-of-the-answer-recommender-knowledge-base\">Configuration of the answer recommender</a>\n<br>\nTo index data into the Decision Table see: <a href=\"https://getjenny.github.io/starchat-doc/#configuration-of-the-decisiontable\">Configuration of the Decision Table</a>\n<br>\nTo index terms you can download a pre-trained word2vec model or train a new model by yourself, note that indexing programs only accept a textual format for the input file: <a href=\"https://getjenny.github.io/starchat-doc/#indexing-terms-on-term-table\">Indexing of the terms vector dataset</a>",
             "queries" : [],
-            "analyzer" : "band(keyword(\"index\"), keyword(\"data\"))",
+            "analyzer" : "band(vOneKeyword(\"index\"), vOneKeyword(\"data\"))",
             "state" : "index_data"
          }
       },
@@ -229,7 +229,7 @@
          "score" : 0,
          "document" : {
             "failureValue" : "",
-            "analyzer" : "band(bor(keyword(\"setup\"), keyword(\"install.*\")), bnot(bor(keyword(\"standalone\"), keyword(\"docker\"))))",
+            "analyzer" : "band(bor(vOneKeyword(\"setup\"), vOneKeyword(\"install.*\")), bnot(bor(vOneKeyword(\"standalone\"), vOneKeyword(\"docker\"))))",
             "state" : "install",
             "maxStateCount" : 0,
             "bubble" : "Just choose one of the two:\n<ul>\n<li>docker install (recommended)</li>\n<li>standalone install</li>\n</ul>",
@@ -248,7 +248,7 @@
             "bubble" : "StarChat is Open Source software, namely released under the General Public Licence 2. More information on the <a href=\"http://git.io/*chat\">repository</a>",
             "maxStateCount" : 0,
             "state" : "licence",
-            "analyzer" : "bor(band(keyword(\"open\"), keyword(\"source\")), keyword(\"opensource\"), keyword(\"licence\"))",
+            "analyzer" : "bor(band(vOneKeyword(\"open\"), vOneKeyword(\"source\")), vOneKeyword(\"opensource\"), vOneKeyword(\"licence\"))",
             "executionOrder" : 1,
             "stateData" : {},
             "actionInput" : {},
@@ -264,7 +264,7 @@
             "bubble" : "Just run:\n<br>\n<code>./docker-starchat/starchat/bin/index-decision-table --inputfile <em>FILENAME</em></code>.",
             "maxStateCount" : 0,
             "state" : "load_conf_file",
-            "analyzer" : "band(keyword(\"load.*\"), bor(keyword(\"config.*\"), band(keyword(\"decision\"), keyword(\"table\"))), keyword(\"file.*\"))",
+            "analyzer" : "band(vOneKeyword(\"load.*\"), bor(vOneKeyword(\"config.*\"), band(vOneKeyword(\"decision\"), vOneKeyword(\"table\"))), vOneKeyword(\"file.*\"))",
             "executionOrder" : 1,
             "stateData" : {},
             "actionInput" : {},
@@ -281,7 +281,7 @@
             "actionInput" : {},
             "executionOrder" : 1,
             "stateData" : {},
-            "analyzer" : "band(bor(keyword(\"start\"), keyword(\"quickstart\")), keyword(\"starchat\"))",
+            "analyzer" : "band(bor(vOneKeyword(\"start\"), vOneKeyword(\"quickstart\")), vOneKeyword(\"starchat\"))",
             "state" : "quickstart",
             "queries" : [],
             "bubble" : "The easiest way is to install StarChat using two docker images. You only need:\n<br>\n<ul>\n<li>sbt</li>\n<li>docker</li>\n<li>docker-compose</li>\n</ul>\n\nIn this way, you will put all the indices in the Elasticsearch (version 5.3) image, and StarChat itself in the Java (8) image.\n<br>\nIf you do not use docker you therefore need on your machine:\n<br>\n<ul>\n<li>Scala 12.2</li>\n<li>Elasticsearch 5.3</li>\n</ul>\nJust type “docker install” or “standalone install” to go on.\n",
@@ -303,7 +303,7 @@
             "maxStateCount" : 0,
             "bubble" : "Have a look at <a href=\"https://getjenny.github.io/starchat-doc/#install-without-docker\">how to install without Docker</a>.",
             "queries" : [],
-            "analyzer" : "band(keyword(\"standal.*\"), keyword(\"install\"))",
+            "analyzer" : "band(vOneKeyword(\"standal.*\"), vOneKeyword(\"install\"))",
             "state" : "standalone_install",
             "failureValue" : "dont_understand"
          }
@@ -318,7 +318,7 @@
             "queries" : [],
             "bubble" : "I might be wrong, but I detected swearing. Cannot answer to that.",
             "maxStateCount" : 0,
-            "analyzer" : "booleanor(keyword(\"idiot\"), keyword(\"fuck.*\"), keyword(\"screw\"), keyword(\"damn.*\"), keyword(\"asshole\"))",
+            "analyzer" : "booleanor(vOneKeyword(\"idiot\"), vOneKeyword(\"fuck.*\"), vOneKeyword(\"screw\"), vOneKeyword(\"damn.*\"), vOneKeyword(\"asshole\"))",
             "state" : "terrible_feedback",
             "failureValue" : ""
          },

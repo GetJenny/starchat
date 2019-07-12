@@ -66,11 +66,11 @@ class AnalyzersPlaygroundResourceTest extends WordSpec with Matchers with Scalat
   }
 
   it should {
-    "return an HTTP code 200 when evaluating a simple keyword analyzer with an empty query" in {
+    "return an HTTP code 200 when evaluating a simple vOneKeyword analyzer with an empty query" in {
       val evaluateRequest: AnalyzerEvaluateRequest =
         AnalyzerEvaluateRequest(
           query = "",
-          analyzer = """keyword("test")""",
+          analyzer = """vOneKeyword("test")""",
           data = Option{AnalyzersData()}
         )
 
@@ -85,11 +85,11 @@ class AnalyzersPlaygroundResourceTest extends WordSpec with Matchers with Scalat
   }
 
   it should {
-    "return an HTTP code 200 when evaluating a simple keyword analyzer" in {
+    "return an HTTP code 200 when evaluating a simple vOneKeyword analyzer" in {
       val evaluateRequest: AnalyzerEvaluateRequest =
         AnalyzerEvaluateRequest(
           query = "this is a test",
-          analyzer = """keyword("test")""",
+          analyzer = """vOneKeyword("test")""",
           data = Option{AnalyzersData()}
         )
 
@@ -193,7 +193,7 @@ class AnalyzersPlaygroundResourceTest extends WordSpec with Matchers with Scalat
         AnalyzerEvaluateRequest(
           query = "on 31-11-1900",
           analyzer =
-            """band(prevTravStateIs("one"),binarize(keyword("on")),matchPatternRegex("[day,month,year](?:(0[1-9]|[12][0-9]|3[01])(?:[- \/\.])(0[1-9]|1[012])(?:[- \/\.])((?:19|20)\d\d))"))""",
+            """band(prevTravStateIs("one"),binarize(vOneKeyword("on")),matchPatternRegex("[day,month,year](?:(0[1-9]|[12][0-9]|3[01])(?:[- \/\.])(0[1-9]|1[012])(?:[- \/\.])((?:19|20)\d\d))"))""",
           data = Option{
             AnalyzersData(traversedStates=Vector("one", "two"),
               extractedVariables = Map.empty[String, String])

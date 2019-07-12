@@ -14,17 +14,25 @@ import com.getjenny.starchat.services.esclient.DecisionTableElasticClient
 import com.getjenny.starchat.utils.Index
 import org.apache.lucene.search.join._
 import org.elasticsearch.action.get._
-import org.elasticsearch.action.index.{IndexRequest, IndexResponse}
-import org.elasticsearch.action.search.{SearchRequest, SearchResponse, SearchType}
 import org.elasticsearch.action.update.{UpdateRequest, UpdateResponse}
+import org.elasticsearch.script.Script
+import org.elasticsearch.search.SearchHit
+import org.elasticsearch.action.get.{GetResponse, MultiGetItemResponse, MultiGetRequest}
+import org.elasticsearch.action.index.{IndexRequest, IndexResponse}
+import org.elasticsearch.action.search.{SearchRequest, SearchResponse, SearchScrollRequest, SearchType}
+import org.elasticsearch.action.update.UpdateRequest
 import org.elasticsearch.client.{RequestOptions, RestHighLevelClient}
-import org.elasticsearch.common.unit._
+import org.elasticsearch.common.unit.TimeValue
 import org.elasticsearch.common.xcontent.XContentBuilder
 import org.elasticsearch.common.xcontent.XContentFactory._
 import org.elasticsearch.index.query.{BoolQueryBuilder, InnerHitBuilder, QueryBuilder, QueryBuilders}
 import org.elasticsearch.rest.RestStatus
-import org.elasticsearch.script.Script
-import org.elasticsearch.search.SearchHit
+import org.elasticsearch.search.aggregations.AggregationBuilders
+import org.elasticsearch.search.aggregations.bucket.filter.{Filters, ParsedFilter}
+import org.elasticsearch.search.aggregations.bucket.histogram.{DateHistogramInterval, Histogram, ParsedDateHistogram}
+import org.elasticsearch.search.aggregations.bucket.nested.ParsedNested
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms
+import org.elasticsearch.search.aggregations.metrics.{Avg, Cardinality, Sum}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import scalaz.Scalaz._
 
@@ -896,5 +904,165 @@ object DecisionTableService extends AbstractDataService {
       create(indexName, dtDocument, 0)
     }).toList
     IndexDocumentListResult(data = indexDocumentListResult)
+  }
+
+
+  def wordFrequenciesInQueries(indexName:String): Map[String,Double] =  {
+    val client: RestHighLevelClient = elasticClient.httpClient
+
+    val sourceReq: SearchSourceBuilder = new SearchSourceBuilder()
+      .size(0)
+      .minScore(0.0f)
+
+    val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
+      .source(sourceReq)
+      .searchType(SearchType.DFS_QUERY_THEN_FETCH)
+      .requestCache(true)
+
+
+
+    /*   Query to fetch for word freq in queries
+    {
+       "size": 0,
+       "aggregations" : {
+           "wordInQueries": {
+               "nested": { "path": "queries" },
+               "aggregations": {
+                   "queries_children": {
+                       "terms" : { "field": "queries.query.base" }
+                   }
+               }
+
+           }
+        }
+    } */
+
+
+
+    sourceReq.aggregation(
+      AggregationBuilders.nested("queries", "queries")
+        .subAggregation(
+          AggregationBuilders.terms("queries_children").field("queries.query.base").minDocCount(1)
+        )
+    )
+
+    val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
+
+    val parsedNested: ParsedNested = searchResp.getAggregations.get("queries")
+    val nQueries: Double = parsedNested.getDocCount
+    val parsedStringTerms: ParsedStringTerms = parsedNested.getAggregations.get("queries_children")
+    if (nQueries > 0) {
+      parsedStringTerms.getBuckets.asScala.map {
+        bucket => bucket.getKeyAsString -> bucket.getDocCount() / nQueries
+      }.toMap
+    }
+    else
+      Map[String,Double]()
+
+
+
+  }
+
+
+  def wordFrequenciesInQueriesByState(indexName: String): List[DTStateWordFreqsItem] = {
+    val client: RestHighLevelClient = elasticClient.httpClient
+
+    val sourceReq: SearchSourceBuilder = new SearchSourceBuilder()
+      .size(0)
+      .minScore(0.0f)
+
+    val searchReq = new SearchRequest(Index.indexName(indexName, elasticClient.indexSuffix))
+      .source(sourceReq)
+      .searchType(SearchType.DFS_QUERY_THEN_FETCH)
+      .requestCache(true)
+
+
+
+    /*   Query to fetch for each state word freq in queries
+    {
+       "size": 0,
+       "query": {
+          "bool": {
+            "must": [
+              {
+                "nested": {
+                  "path": "queries",
+                  "query": {
+                    "bool": {
+                      "filter": {
+                        "exists": {
+                          "field": "queries"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "aggs": {
+        "states": {
+          "terms": {
+            "field": "state",
+            "size": 10000000
+          },
+          "aggs": {
+            "queries": {
+              "nested": { "path": "queries" },
+              "aggregations": {
+                "queries_children": {
+                  "terms" : { "field": "queries.query.base" }
+                }
+              }
+            }
+          }
+        }
+      }
+    } */
+
+    val stateAggsName = "StatesWordStats"
+
+    // Filter all states with queries
+    sourceReq.query(
+      QueryBuilders.boolQuery().must(
+        QueryBuilders.nestedQuery("queries",
+          QueryBuilders.boolQuery().filter(QueryBuilders.existsQuery("queries")), ScoreMode.None))
+    )
+
+
+    // Calculate for each state with queries the words freq histogram.
+    sourceReq.aggregation(
+      AggregationBuilders.terms(stateAggsName).field("state").size(65536).minDocCount(1)
+        .subAggregation(
+          AggregationBuilders.nested("queries", "queries")
+            .subAggregation(
+              AggregationBuilders.terms("queries_children").field("queries.query.base").minDocCount(1)
+            )
+        )
+    )
+
+    val searchResp: SearchResponse = client.search(searchReq, RequestOptions.DEFAULT)
+
+
+    val pst: ParsedStringTerms = searchResp.getAggregations.get(stateAggsName)
+    pst.getBuckets.asScala.map {
+      stateBucket => {
+        val state = stateBucket.getKeyAsString
+        val parsedNested: ParsedNested = stateBucket.getAggregations.get("queries")
+        val nQueries: Double = parsedNested.getDocCount
+        val parsedStringTerms: ParsedStringTerms = parsedNested.getAggregations.get("queries_children")
+        if (nQueries > 0) {
+          val wordFreqs = parsedStringTerms.getBuckets.asScala.map {
+            bucket => bucket.getKeyAsString -> bucket.getDocCount() / nQueries // normalize on nQueries
+          }.toMap
+          // add to map for each state the histogram wordFreqs
+          DTStateWordFreqsItem(state, wordFreqs)
+        }
+        else
+          DTStateWordFreqsItem(state, Map[String,Double]())
+      }
+    }.toList
+
   }
 }
