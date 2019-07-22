@@ -1574,6 +1574,7 @@ trait QuestionAnswerService extends AbstractDataService {
     document.coreData match {
       case Some(coreData) =>
         coreData.question match {
+          case Some("") => ;
           case Some(t) =>
             builder.field("question", t)
           case _ => ;
@@ -1598,6 +1599,7 @@ trait QuestionAnswerService extends AbstractDataService {
           case _ => ;
         }
         coreData.answer match {
+          case Some("") => ;
           case Some(t) => builder.field("answer", t)
           case _ => ;
         }

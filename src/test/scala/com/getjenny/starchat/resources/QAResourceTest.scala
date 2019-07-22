@@ -412,6 +412,40 @@ class QAResourceTest extends WordSpec with Matchers with ScalatestRouteTest with
     }
   }
 
+  for (qaRoute <- qaRoutes) {
+    val document = QADocument(
+      id = "id94",
+      conversation = "conv_id_1",
+      indexInConversation = 1,
+      coreData = Some(QADocumentCore(
+        question = Some(""),
+        answer = Some("")
+      )),
+      annotations = Some(QADocumentAnnotations(
+        doctype = Some(Doctypes.NORMAL),
+        agent = Some(Agent.HUMAN_REPLY),
+      ))
+    )
+    it should {
+      s"should not store empty strings in question or answer fields in the $qaRoute" in {
+        Post(s"/index_getjenny_english_0/$qaRoute?refresh=1", document) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+          status shouldEqual StatusCodes.Created
+          val response = responseAs[IndexDocumentResult]
+          response.id
+        }.andThen(id => {
+          Get(s"/index_getjenny_english_0/$qaRoute?id=$id") ~> addCredentials(testUserCredentials) ~> routes ~> check {
+            status shouldEqual StatusCodes.OK
+            val response = responseAs[SearchQADocumentsResults]
+            val document = response.hits.headOption.getOrElse(fail("document not found")).document
+            val coreData = document.coreData.getOrElse(fail("no coreData"))
+            coreData.answer shouldEqual None
+            coreData.question shouldEqual None
+          }
+        })
+      }
+    }
+  }
+
   it should {
     "return an HTTP code 200 when deleting an index" in {
       Delete(s"/index_getjenny_english_0/index_management") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
