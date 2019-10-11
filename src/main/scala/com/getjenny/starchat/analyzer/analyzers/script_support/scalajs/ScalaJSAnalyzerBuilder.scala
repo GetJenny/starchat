@@ -5,7 +5,7 @@ import com.getjenny.starchat.analyzer.analyzers.AbstractAnalyzerBuilder
 import javax.script.{Compilable, ScriptEngine, ScriptEngineManager}
 import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.io.{MemVirtualSerializedScalaJSIRFile, VirtualScalaJSIRFile, WritableMemVirtualJSFile}
-import org.scalajs.core.tools.linker.{ModuleInitializer, StandardLinker}
+import org.scalajs.core.tools.linker.StandardLinker
 import org.scalajs.core.tools.logging.ScalaConsoleLogger
 import org.scalajs.core.tools.sem.Semantics
 
@@ -32,19 +32,21 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     }
   }
 
-  /**
-    * Defines the names of the module and the main method of the ScalaJS script.
-    * The script must contain object ScalaJSAnalyzer with main method in order to work.
-    */
-  private[this] val mainModuleInitializerSeq = Seq(ModuleInitializer
-    .mainMethodWithArgs(moduleClassName = "ScalaJSAnalyzer",
-      mainMethodName = "main",
-      args = Nil
-    ))
   private[this] var compiler = new Compiler
   private[this] var processor = new Processor
 
   def build(script: String, restrictedArgs: Map[String, String] = Map.empty): ScalaJSAnalyzer = {
+
+    val scriptToCompile =
+      f"""
+        |import scalajs.js
+        |
+        |@js.annotation.JSExportTopLevel("ScalaJSAnalyzer")
+        |object ScalaJSAnalyzer {
+        | $script
+        |}
+        |""".stripMargin
+
     /**
       * If an error occurs during the compiler or linking process, the module cannot be reused
       * and have to reinitialize.
@@ -52,7 +54,7 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
       * update: 11.11.2019 there was a pull request merged in ScalaJS-project which allows linker to be reset
       * after an exception. Consider updating ScalaJS version when it's ready.
       */
-    val sjsirFiles = Try(compiler.compile(script)) match {
+    val sjsirFiles = Try(compiler.compile(scriptToCompile)) match {
       case Success(value) => value
       case Failure(e) =>
         compiler = new Compiler()
@@ -128,7 +130,7 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     def process(sjsirFiles: Seq[VirtualScalaJSIRFile]): String = {
       val output = WritableMemVirtualJSFile("output.js")
       linker.link(sjsirFiles,
-        mainModuleInitializerSeq,
+        Nil,
         output,
         logger
       )
