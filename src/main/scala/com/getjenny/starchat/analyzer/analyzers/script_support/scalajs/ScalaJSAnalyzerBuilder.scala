@@ -28,7 +28,7 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     val manager = new ScriptEngineManager(getClass.getClassLoader)
     manager.getEngineByName("nashorn") match {
       case engine: ScriptEngine with Compilable => engine
-      case _ => throw new Exception("can't create the ScriptEngine")
+      case _ => throw new Exception("Unable to create the ScriptEngine")
     }
   }
 
@@ -46,8 +46,11 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
 
   def build(script: String, restrictedArgs: Map[String, String] = Map.empty): ScalaJSAnalyzer = {
     /**
-      * If and error happens during the compiler or linking process, the module cannot be reused
+      * If an error occurs during the compiler or linking process, the module cannot be reused
       * and have to reinitialize.
+      *
+      * update: 11.11.2019 there was a pull request merged in ScalaJS-project which allows linker to be reset
+      * after an exception. Consider updating ScalaJS version when it's ready.
       */
     val sjsirFiles = Try(compiler.compile(script)) match {
       case Success(value) => value
@@ -66,7 +69,7 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
   }
 
   /**
-    * Compiles the ScalaJS script into .sjsir files
+    * Compiles the ScalaJS script into .sjsir files. Files will be consumed by linker.
     */
   private[this] class Compiler {
     private[this] val settings = new Settings()
