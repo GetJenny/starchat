@@ -1,7 +1,7 @@
 package com.getjenny.starchat.analyzer.analyzers.script_support.scalajs
 
 
-import com.getjenny.starchat.analyzer.analyzers.AnalyzerAbstractBuilder
+import com.getjenny.starchat.analyzer.analyzers.AbstractAnalyzerBuilder
 import javax.script.{Compilable, ScriptEngine, ScriptEngineManager}
 import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.io.{MemVirtualSerializedScalaJSIRFile, VirtualScalaJSIRFile, WritableMemVirtualJSFile}
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 class CompilationFailedException(val messages: Iterable[(Int, String)])
   extends Exception(messages.map{ case (row, cause) => row + ". " + cause}.mkString("\n"))
 
-object ScalaJSAnalyzerBuilder extends AnalyzerAbstractBuilder {
+object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
 
   private[this] val linkerLibraries: Seq[VirtualRelativeIRFile] = LibraryManager.linkerLibraries
   private[this] val compilerLibraries: Seq[AbstractFile] = LibraryManager.compilerLibraries
