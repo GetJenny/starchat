@@ -11,7 +11,7 @@ final case class ScalaJSAnalyzerExcpetion(
                                            private val cause: Throwable = None.orNull
                                          ) extends Exception(message, cause)
 
-class ScalaJSAnalyzer(compiledScript: CompiledScript) extends AbstractAnalyzer {
+class ScalaJSAnalyzer(compiledScript: CompiledScript, restrictedArgs: Map[String, String]) extends AbstractAnalyzer {
 
   val engine: ScriptEngine = compiledScript.getEngine
 
@@ -21,6 +21,7 @@ class ScalaJSAnalyzer(compiledScript: CompiledScript) extends AbstractAnalyzer {
     val bindings = engine.createBindings()
     bindings.put("sentence", sentence)
     bindings.put("analyzersDataInternal", data)
+    bindings.put("restrictedArgs", restrictedArgs)
 
     // evaluate script
     Try(compiledScript.eval(bindings)) match {

@@ -61,7 +61,7 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
         throw e
     }
     val compiledScript = engine.compile(javaScript)
-    new ScalaJSAnalyzer(compiledScript)
+    new ScalaJSAnalyzer(compiledScript, restrictedArgs)
   }
 
   /**
