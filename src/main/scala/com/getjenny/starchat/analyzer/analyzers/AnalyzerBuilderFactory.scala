@@ -8,7 +8,7 @@ trait AbstractAnalyzer {
   def evaluate(sentence: String, data: AnalyzersDataInternal = AnalyzersDataInternal()): Result
 }
 
-trait AnalyzerAbstractBuilder {
+trait AbstractAnalyzerBuilder {
   def build(command: String, restrictedArgs: Map[String, String]): AbstractAnalyzer
 }
 
@@ -21,7 +21,7 @@ object ScriptEngines extends Enumeration {
 
 object AnalyzerBuilderFactory {
 
-  def get(scriptEngine: ScriptEngines.Value): AnalyzerAbstractBuilder = scriptEngine match {
+  def get(scriptEngine: ScriptEngines.Value): AbstractAnalyzerBuilder = scriptEngine match {
     case ScriptEngines.SCALAJS => ScalaJSAnalyzerBuilder
     case ScriptEngines.GJANALYZERS => GetJennyAnalyzerBuilder
     case _ => GetJennyAnalyzerBuilder
