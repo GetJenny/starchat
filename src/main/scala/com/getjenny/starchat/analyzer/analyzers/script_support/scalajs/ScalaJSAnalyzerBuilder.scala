@@ -7,6 +7,7 @@ import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.io.{MemVirtualSerializedScalaJSIRFile, VirtualScalaJSIRFile, WritableMemVirtualJSFile}
 import org.scalajs.core.tools.linker.{ModuleInitializer, StandardLinker}
 import org.scalajs.core.tools.logging.ScalaConsoleLogger
+import org.scalajs.core.tools.sem.Semantics
 
 import scala.reflect.io
 import scala.reflect.io.VirtualDirectory
@@ -114,6 +115,10 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     */
   private[this] class Processor {
     private[this] val linkerConfig = StandardLinker.Config()
+      .withSemantics(Semantics.Defaults.optimized)
+      .withSourceMap(false)
+      .withClosureCompilerIfAvailable(true)
+      .withOptimizer(true)
     private[this] val linker = StandardLinker(linkerConfig)
     private[this] val logger = new ScalaConsoleLogger() // use different logger?
 
