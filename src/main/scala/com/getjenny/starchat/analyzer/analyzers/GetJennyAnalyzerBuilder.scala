@@ -1,6 +1,9 @@
 package com.getjenny.starchat.analyzer.analyzers
 
-object GetJennyAnalyzerBuilder extends AnalyzerAbstractBuilder {
+class GetJennyAnalyzer(command: String, restrictedArgs: Map[String, String])
+  extends StarChatAnalyzer(command, restrictedArgs) with AbstractAnalyzer
+
+object GetJennyAnalyzerBuilder extends AbstractAnalyzerBuilder {
   def build(script: String, restrictedArgs: Map[String, String]): AbstractAnalyzer =
-    new StarChatAnalyzer(script, restrictedArgs)
+    new GetJennyAnalyzer(script, restrictedArgs)
 }
