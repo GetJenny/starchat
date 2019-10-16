@@ -37,15 +37,20 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
 
   def build(script: String, restrictedArgs: Map[String, String] = Map.empty): ScalaJSAnalyzer = {
 
-    val scriptToCompile =
+    def template(script: String): String =
       f"""
         |import scalajs.js
         |
-        |@js.annotation.JSExportTopLevel("ScalaJSAnalyzer")
+        |@js.annotation.JSExportTopLevel("ScalaJSAnalzer")
         |object ScalaJSAnalyzer {
-        | $script
+        |  @js.annotation.JSExport
+        |  def main = {
+        |    $script
+        |  }
         |}
         |""".stripMargin
+
+    val scriptToCompile = template(script)
 
     /**
       * If an error occurs during the compiler or linking process, the module cannot be reused
