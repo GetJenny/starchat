@@ -1,7 +1,7 @@
 package com.getjenny.starchat.entities
 
 case class NodeDtLoadingStatus(
-                        uuid: String = "",
+                        uuid: Option[String] = Some{""},
                         index: String,
-                        timestamp: Long = 0
+                        timestamp: Option[Long] = Some{0}
                       )

@@ -20,9 +20,11 @@ services:
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
 
   starchat:
-    image: openjdk:8-jre-alpine
+    image: getjenny/jre:8
     restart: unless-stopped
-    command: ["/starchat/scripts/utils/wait-for-it.sh", "getjenny-es", "9200", "10", "/starchat/bin/starchat"]
+    command: ["/starchat/scripts/utils/wait-for-it.sh", "getjenny-es:9200",
+              "-t", "15",
+              "--", "/starchat/bin/starchat"]
     volumes:
       - ./starchat:/starchat
     ports:

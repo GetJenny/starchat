@@ -3,21 +3,22 @@ package com.getjenny.starchat.resources
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, Multipart, StatusCodes}
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
+import com.getjenny.starchat.StarChatService
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.serializers.JsonSupport
 import com.getjenny.starchat.utils.Index
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
-import scala.io.Source
 
 class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
   implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
 
-  val service = TestFixtures.service
-  val routes = service.routes
+  val service: StarChatService = TestFixtures.service
+  val routes: Route = service.routes
 
   val testAdminCredentials = BasicHttpCredentials("admin", "adminp4ssw0rd")
   val testUserCredentials = BasicHttpCredentials("test_user", "p4ssw0rd")
@@ -139,35 +140,6 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
   }
 
   it should {
-    "return an HTTP code 201 when creating a new document with a ScalaJS analyzer" in {
-      val script = Source.fromResource("test_data/script.scala").getLines().mkString("\n")
-      val dtRequest = DTDocument(
-        state = "greetings_name",
-        executionOrder = 0,
-        maxStateCount = 0,
-        analyzer = "type/SCALAJS\n"+script,
-        queries = List(),
-        bubble = "Greetings %name%!",
-        action = "",
-        actionInput = Map.empty,
-        stateData = Map.empty,
-        successValue = "",
-        failureValue = "",
-        evaluationClass = Some("default"),
-        version = None
-      )
-      Post(s"/index_getjenny_english_0/decisiontable?refresh=1", dtRequest) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Created
-        val response = responseAs[IndexDocumentResult]
-        response.created should be (true)
-        response.id should be ("greetings_name")
-        response.index should be ("index_getjenny_english_0.state")
-        response.version should be (1)
-      }
-    }
-  }
-
-  it should {
     "return an HTTP code 201 when creating a new document with state that already exist" in {
       val decisionTableRequest = DTDocument(
         state = "forgot_password",
@@ -272,7 +244,7 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
       Get("/index_getjenny_english_0/decisiontable?dump=true") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[SearchDTDocumentsResults]
-        response.total should be (22)
+        response.total should be (24)
       }
     }
   }
@@ -521,32 +493,6 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
   }
 
   it should {
-    "return an HTTP code 200 when getting next response and return the document with scalajs anlayzer" in {
-      val request = ResponseRequestIn(
-        conversationId = "conv_1234",
-        traversedStates = Some(Vector("state_0")),
-        userInput = Some(ResponseRequestInUserInput(text = Some("Hello, my name is Stephen"), img = None
-        )),
-        state = None,
-        data = None,
-        threshold = Some(0.7),
-        evaluationClass = None,
-        maxResults = Some(1),
-        searchAlgorithm = Some(SearchAlgorithm.NGRAM3)
-      )
-
-      Post("/index_getjenny_english_0/get_next_response", request) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.OK
-        val response = responseAs[List[ResponseRequestOut]]
-        val headResponseRequestOut = response.headOption.getOrElse(fail)
-        headResponseRequestOut.bubble should be ("Greetings Stephen!")
-        headResponseRequestOut.traversedStates should be (Vector("state_0", "greetings_name"))
-        headResponseRequestOut.data should be (Map("name" -> "Stephen"))
-      }
-    }
-  }
-
-  it should {
     "return an HTTP code 200 when deleting a document" in {
       Delete("/index_getjenny_english_0/decisiontable?id=forgot_password&refresh=1") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -576,7 +522,7 @@ class DecisionTableResourceTest extends WordSpec with Matchers with ScalatestRou
       Delete("/index_getjenny_english_0/decisiontable/all") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[DeleteDocumentsSummaryResult]
-        response.deleted should be (21)
+        response.deleted should be (23)
       }
     }
   }

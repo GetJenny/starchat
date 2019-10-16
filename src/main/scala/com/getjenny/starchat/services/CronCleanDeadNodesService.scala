@@ -26,7 +26,7 @@ object CronCleanDeadNodesService extends CronService {
     }
   }
 
-  def scheduleAction: Unit = {
+  def scheduleAction(): Unit = {
     val actorRef =
       SCActorSystem.system.actorOf(Props(new CleanDeadNodesTickActor))
     SCActorSystem.system.scheduler.schedule(

@@ -1,0 +1,27 @@
+{
+  "analysis":
+  {
+    "tokenizer": {
+      "space_punctuation": {
+        "type": "pattern",
+        "pattern": "[ |.,!?:;()\\[\\]\\{\\}]"
+      }
+    },
+    "char_filter":
+    {
+      "&_to_and": {
+        "type":       "mapping",
+        "mappings": [ "&=> and "]
+      }
+    },
+    "analyzer":
+    {
+      "jenny_space_punctuation_analyzer":
+      {
+        "tokenizer":    "space_punctuation",
+        "filter":       [ "lowercase"],
+        "char_filter":  [ "&_to_and" ]
+      }
+    }
+  }
+}

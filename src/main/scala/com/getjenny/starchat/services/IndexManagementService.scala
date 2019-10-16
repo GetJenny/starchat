@@ -40,24 +40,42 @@ object IndexManagementService extends AbstractDataService {
   private[this] def analyzerFiles(language: String): JsonMappingAnalyzersIndexFiles =
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/" + language + "/analyzer.json",
       updatePath = "/index_management/json_index_spec/" + language + "/update/analyzer.json",
-      indexSuffix = "")
+      indexSuffix = "",
+      numberOfShards = 0,
+      numberOfReplicas = 0
+    )
 
   private[this] val schemaFiles: List[JsonMappingAnalyzersIndexFiles] = List[JsonMappingAnalyzersIndexFiles](
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/general/state.json",
       updatePath = "/index_management/json_index_spec/general/update/state.json",
-      indexSuffix = elasticClient.dtIndexSuffix),
+      indexSuffix = elasticClient.dtIndexSuffix,
+      numberOfShards = elasticClient.stateNumberOfShards,
+      numberOfReplicas = elasticClient.stateNumberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/general/question_answer.json",
       updatePath = "/index_management/json_index_spec/general/update/question_answer.json",
-      indexSuffix = elasticClient.convLogsIndexSuffix),
+      indexSuffix = elasticClient.convLogsIndexSuffix,
+      numberOfShards = elasticClient.logsDataNumberOfShards,
+      numberOfReplicas = elasticClient.logsDataNumberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/general/question_answer.json",
       updatePath = "/index_management/json_index_spec/general/update/question_answer.json",
-      indexSuffix = elasticClient.priorDataIndexSuffix),
+      indexSuffix = elasticClient.priorDataIndexSuffix,
+      numberOfShards = elasticClient.priorDataNumberOfShards,
+      numberOfReplicas = elasticClient.priorDataNumberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/general/question_answer.json",
       updatePath = "/index_management/json_index_spec/general/update/question_answer.json",
-      indexSuffix = elasticClient.kbIndexSuffix),
+      indexSuffix = elasticClient.kbIndexSuffix,
+      numberOfShards = elasticClient.kbNumberOfShards,
+      numberOfReplicas = elasticClient.kbNumberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/general/term.json",
       updatePath = "/index_management/json_index_spec/general/update/term.json",
-      indexSuffix = elasticClient.termIndexSuffix)
+      indexSuffix = elasticClient.termIndexSuffix,
+      numberOfShards = elasticClient.termNumberOfShards,
+      numberOfReplicas = elasticClient.termNumberOfReplicas
+    )
   )
 
   private[this] object LangResourceType extends Enumeration {
@@ -152,13 +170,14 @@ object IndexManagementService extends AbstractDataService {
 
       val createIndexReq = new CreateIndexRequest(fullIndexName).settings(
         Settings.builder().loadFromSource(analyzerJson, XContentType.JSON)
-          .put("index.number_of_shards", elasticClient.numberOfShards)
-          .put("index.number_of_replicas", elasticClient.numberOfReplicas)
+          .put("index.number_of_shards", item.numberOfShards)
+          .put("index.number_of_replicas", item.numberOfReplicas)
       ).source(schemaJson, XContentType.JSON)
 
       val createIndexRes: CreateIndexResponse = client.indices.create(createIndexReq, RequestOptions.DEFAULT)
 
-      loadLangSpecificResources(indexName, item.indexSuffix, language, true)
+      loadLangSpecificResources(indexName = indexName, indexSuffix = item.indexSuffix,
+        language = language, openCloseIndices = true)
 
       (item.indexSuffix + "(" + fullIndexName + ", " + createIndexRes.isAcknowledged + ")",
         createIndexRes.isAcknowledged)

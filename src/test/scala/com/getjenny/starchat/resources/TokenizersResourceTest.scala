@@ -3,10 +3,8 @@ package com.getjenny.starchat.resources
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
-import com.getjenny.starchat.StarChatService
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.serializers.JsonSupport
 import com.getjenny.starchat.utils.Index
@@ -14,11 +12,11 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
 
-class LanguageGuesserResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
-implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
+class TokenizersResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
+  implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
 
-  val service: StarChatService = TestFixtures.service
-  val routes: Route = service.routes
+  val service = TestFixtures.service
+  val routes = service.routes
 
   val testAdminCredentials = BasicHttpCredentials("admin", "adminp4ssw0rd")
   val testUserCredentials = BasicHttpCredentials("test_user", "p4ssw0rd")
@@ -66,61 +64,66 @@ implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds
     }
   }
 
-  val languageIterator: Iterator[(String, String)] = {
-    val input_file = getClass.getResourceAsStream("/test_data/language_guesser_test_parameters.csv")
-    val input_data = scala.io.Source.fromInputStream(input_file, "UTF-8").getLines
-    input_data.next() //skip column names
-    new Iterator[(String, String)] {
-      override def hasNext: Boolean = input_data.hasNext
-      override def next(): (String, String) = {
-        val line = input_data.next().split(",")
-        (line(0), line(1))
-      }
-    }
-  }
-
-  for((language, sentence) <- languageIterator) {
-    it should {
-      s"return an HTTP code 200 when checking if '$language' is supported" in {
-        Get(s"/index_getjenny_english_0/language_guesser/$language") ~> addCredentials(testUserCredentials) ~> routes ~> check {
-          status shouldEqual StatusCodes.OK
-          val response = responseAs[LanguageGuesserInformations]
-          response.supportedLanguages should (contain key "languages" and contain value Map(language -> true))
-        }
-      }
-    }
-
-    it should {
-      val languageGuesserRequestIn: LanguageGuesserRequestIn = LanguageGuesserRequestIn(
-        inputText = sentence
-      )
-
-      s"return an HTTP code 200 when guessing '$language' language" in {
-        Post(s"/index_getjenny_english_0/language_guesser", languageGuesserRequestIn) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-          status shouldEqual StatusCodes.OK
-          val response = responseAs[LanguageGuesserRequestOut]
-          response.language should be(language)
-        }
+  it should {
+    "return an HTTP code 201 when creating a new common index" in {
+      Post(s"/index_getjenny_english_common_0/index_management/create") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.Created
+        val response = responseAs[IndexManagementResponse]
+        response.message should fullyMatch regex "IndexCreation: " +
+          "(?:[A-Za-z0-9_]+)\\(" + Index.indexMatchRegex + "\\.(?:[A-Za-z0-9_]+), true\\) " +
+          "(?:[A-Za-z0-9_]+)\\(" + Index.indexMatchRegex + "\\.(?:[A-Za-z0-9_]+), true\\) " +
+          "(?:[A-Za-z0-9_]+)\\(" + Index.indexMatchRegex + "\\.(?:[A-Za-z0-9_]+), true\\) " +
+          "(?:[A-Za-z0-9_]+)\\(" + Index.indexMatchRegex + "\\.(?:[A-Za-z0-9_]+), true\\) " +
+          "(?:[A-Za-z0-9_]+)\\(" + Index.indexMatchRegex + "\\.(?:[A-Za-z0-9_]+), true\\)".r
       }
     }
   }
 
   it should {
-    val languageGuesserRequestIn: LanguageGuesserRequestIn = LanguageGuesserRequestIn(
-      inputText = "I am unauthorized"
-    )
-    val unauthorizedUserCredentials = BasicHttpCredentials("jack", "sparrow")
+    "return an HTTP code 200 when listing all tokenizers" in {
+      Get(s"/index_getjenny_english_0/tokenizers") ~> addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[Map[String, String]]
+      }
+    }
+  }
 
-    s"return an HTTP code 401 when unauthorized" in {
-      Post(s"/index_getjenny_english_0/language_guesser", languageGuesserRequestIn) ~> addCredentials(unauthorizedUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Unauthorized
+  it should {
+    "return an HTTP code 200 when extracting tokens from text" in {
+      val text = "a quick brown fox"
+      val tokenizer = "base_stem"
+      val request = TokenizerQueryRequest(tokenizer = tokenizer, text = text)
+      Post(s"/index_getjenny_english_0/tokenizers", request) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[TokenizerResponse]
+        response.tokens.length shouldBe 4
+        response.tokens.map(_.token) shouldEqual text.split(" ").toSeq
+      }
+    }
+
+    "return an HTTP code 400 when tokenizer not supported" in {
+      val text = "a quick brown fox"
+      val tokenizer = "unknown"
+      val request = TokenizerQueryRequest(tokenizer = tokenizer, text = text)
+      Post(s"/index_getjenny_english_0/tokenizers", request) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        val response = responseAs[ReturnMessageData]
       }
     }
   }
 
   it should {
     "return an HTTP code 200 when deleting an index" in {
-      Delete(s"/index_getjenny_english_0/index_management") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
+      Delete(s"/index_getjenny_english_0/index_management") ~>  addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[IndexManagementResponse]
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 200 when deleting an common index" in {
+      Delete(s"/index_getjenny_english_common_0/index_management") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[IndexManagementResponse]
       }
@@ -135,5 +138,4 @@ implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds
       }
     }
   }
-
 }

@@ -1,6 +1,9 @@
 state,executionOrder,maxStateCount,analyzer,queries,bubble,action,actionInput,stateData,successValue,failureValue,evaluationClass
 help,1,0,"band(vOneKeyword(""help""))",,"Ask me questions like... how to install? ...how to contribute? ...is it open source? ...how to install with docker? ...how to make a standalone installation? ...how to index data?",,,,,,default
 further_details_access_question,1,0,"or(and(or(vOneKeyword(""problem.*""),vOneKeyword(""issue.*""),vOneKeyword(""trouble.*"")),vOneKeyword(""account"")))","[""cannot access account"", ""problem access account""]",Can you specify which of the following problems you have? [NB works only if buttons can be shown!],show_buttons,"{""Forgot Password"": ""forgot_password"", ""Account locked"": ""account_locked"", ""Specify your problem"": ""specify_problem"", ""I want to call an operator"": ""call_operator"", ""None of the above"": ""start""}","{""verification"": ""did you mean you can't access to your account?""}",eval(show_buttons),dont_understand,default
+hello,1,0,"search()","[""hello"", ""hi""]",Hello!,,,,,,
+hello2,1,0,"search()","[""ciao"", ""buongiorno""]",Buongiorno!,,,,,,
+hello3,1,0,"search(""hello3"")","[""buonasera""]",Buonasera,,,,,,
 contribute,1,0,"bor(vOneKeyword(""contribute""))",,"To contribute to <a href=""http://git.io/*chat"">StarChat</a>, please send us a pull request from your fork of this repository.
 <br>Our concise contribution guideline contains the bare minimum requirements of the code contributions.
 <br>Before contributing (or opening issues), you might want to email us at starchat@getjenny.com.",,,,,,default

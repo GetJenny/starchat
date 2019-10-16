@@ -64,10 +64,10 @@ object Index {
   def getCommonIndexName(indexName: String, useDefaultOrg: Boolean = true): String = {
     val arbitraryPattern =  TermService.commonIndexArbitraryPattern
     val (organization, language, _) = patternsFromIndexName(indexName)
-    val org = useDefaultOrg match {
-      case true =>
-        TermService.defaultOrg
-      case _ => organization
+    val org = if (useDefaultOrg) {
+      TermService.defaultOrg
+    } else {
+      organization
     }
     "index_" + org + "_" + language + "_" + arbitraryPattern
   }

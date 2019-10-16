@@ -23,59 +23,92 @@ object LoggingEntities {
     case _ => "unknown ip"
   }
 
-  def requestMethodAndResponseStatusReduced(remoteAddress: RemoteAddress)
+  def requestMethodAndResponseStatusReduced(remoteAddress: RemoteAddress, requestTimestamp: Long)
                                            (req: HttpRequest): RouteResult => Option[LogEntry] = {
     case RouteResult.Complete(res) =>
-      Some(LogEntry(
-        remoteAddressReqUriReqRes.format(address(remoteAddress), req.uri, req.method.name, res.status),
-        Logging.InfoLevel))
-    case RouteResult.Rejected(rejections) => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") Rejected: " + rejections.mkString(", "), Logging.DebugLevel))
-    case _ => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") : Unknown RouteResult", Logging.ErrorLevel))
-  }
-
-  def requestMethodAndResponseStatus(remoteAddress: RemoteAddress)
-                                    (req: HttpRequest): RouteResult => Option[LogEntry] = {
-    case RouteResult.Complete(res) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
       Some(LogEntry(
         remoteAddressReqUriReqRes.format(address(remoteAddress), req.uri, req.method.name, res.status) +
-        " ReqEntity(" + req.entity.httpEntity + ") ResEntity(" + res.entity + ") "
-        , Logging.InfoLevel))
-    case RouteResult.Rejected(rejections) => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") Rejected: " + rejections.mkString(", "), Logging.DebugLevel))
-    case _ => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") : Unknown RouteResult", Logging.ErrorLevel))
+          " ElapsedTimeMs(" + elapsedTime + ")",
+        Logging.InfoLevel))
+    case RouteResult.Rejected(rejections) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") Rejected: " + rejections.mkString(", ") +
+        " ElapsedTimeMs(" + elapsedTime + ")", Logging.DebugLevel))
+    case _ =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") : Unknown RouteResult" +
+        " ElapsedTimeMs(" + elapsedTime + ")", Logging.ErrorLevel))
   }
 
-  def requestMethodAndResponseStatusB64(remoteAddress: RemoteAddress)
+  def requestMethodAndResponseStatus(remoteAddress: RemoteAddress, requestTimestamp: Long)
+                                    (req: HttpRequest): RouteResult => Option[LogEntry] = {
+    case RouteResult.Complete(res) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry(
+        remoteAddressReqUriReqRes.format(address(remoteAddress), req.uri, req.method.name, res.status) +
+        " ReqEntity(" + req.entity.httpEntity + ") ResEntity(" + res.entity + ") ElapsedTimeMs(" + elapsedTime + ")"
+        , Logging.InfoLevel))
+    case RouteResult.Rejected(rejections) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") Rejected: " + rejections.mkString(", ") + " ElapsedTimeMs(" + elapsedTime + ")", Logging.DebugLevel))
+    case _ =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") : Unknown RouteResult" + " ElapsedTimeMs(" + elapsedTime + ")", Logging.ErrorLevel))
+  }
+
+  def requestMethodAndResponseStatusB64(remoteAddress: RemoteAddress, requestTimestamp: Long)
                                        (req: HttpRequest): RouteResult => Option[LogEntry] = {
     case RouteResult.Complete(res) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
       Some(LogEntry(
         remoteAddressReqUriReqRes.format(address(remoteAddress), req.uri, req.method.name, res.status) +
         " ReqEntity(" + req.entity + ")" +
         " ReqB64Entity(" + Base64.getEncoder.encodeToString(req.entity.toString.getBytes) + ")" +
         " ResEntity(" + res.entity + ")" +
-        " ResB64Entity(" + Base64.getEncoder.encodeToString(res.entity.toString.getBytes) + ")", Logging.InfoLevel))
-    case RouteResult.Rejected(rejections) => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") Rejected: " + rejections.mkString(", "), Logging.DebugLevel))
-    case _ => Some(LogEntry("remoteAddress(" + address(remoteAddress) +
-      ") : Unknown RouteResult", Logging.ErrorLevel))
+        " ResB64Entity(" + Base64.getEncoder.encodeToString(res.entity.toString.getBytes) + ")" +
+        " ElapsedTimeMs(" + elapsedTime + ")", Logging.InfoLevel))
+    case RouteResult.Rejected(rejections) =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") Rejected: " + rejections.mkString(", ") +
+        " ElapsedTimeMs(" + elapsedTime + ")", Logging.DebugLevel))
+    case _ =>
+      val responseTimestamp: Long = System.currentTimeMillis()
+      val elapsedTime: Long = (responseTimestamp - requestTimestamp)
+      Some(LogEntry("remoteAddress(" + address(remoteAddress) +
+        ") : Unknown RouteResult" +
+        " ElapsedTimeMs(" + elapsedTime + ")", Logging.ErrorLevel))
   }
 
   val logRequestAndResult: Directive0 =
     extractClientIP.flatMap { ip =>
-      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatus(ip) _)
+      val requestTimestamp: Long = System.currentTimeMillis()
+      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatus(ip, requestTimestamp) _)
     }
 
   val logRequestAndResultB64: Directive0 =
     extractClientIP.flatMap { ip =>
-      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatusB64(ip) _)
+      val requestTimestamp: Long = System.currentTimeMillis()
+      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatusB64(ip, requestTimestamp) _)
     }
 
   val logRequestAndResultReduced: Directive0 =
     extractClientIP.flatMap { ip =>
-      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatusReduced(ip) _)
+      val requestTimestamp: Long = System.currentTimeMillis()
+      DebuggingDirectives.logRequestResult(requestMethodAndResponseStatusReduced(ip, requestTimestamp) _)
     }
 }
 

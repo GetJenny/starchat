@@ -4,12 +4,12 @@ import com.getjenny.analyzer.atoms.{AbstractAtomic, ExceptionAtomic}
 import com.getjenny.analyzer.expressions.{AnalyzersDataInternal, Result}
 
 class HasTravStateInPositionRevAtomic(arguments: List[String], restrictedArgs: Map[String, String]) extends AbstractAtomic{
-  val state = arguments.headOption match {
+  val state: String = arguments.headOption match {
     case Some(t) => t
     case _ =>
       throw ExceptionAtomic("hasTravStateInPositionRev: missing first argument")
   }
-  val position = arguments.lift(1) match {
+  val position: Int = arguments.lift(1) match {
     case Some(t) => t.toInt
     case _ =>
       throw ExceptionAtomic("hasTravStateInPositionRev: missing second argument")

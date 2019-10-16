@@ -1134,7 +1134,7 @@ paths:
     post:
       tags:
         - customer
-      operationId: post_decisiontable_upload_csv
+      operationId: post_decisiontable_upload
       summary: Uploads a file on the decision table
       description: >-
         Uploads a file on the decision table, the file must have an header
@@ -3013,9 +3013,12 @@ components:
         userInput:
           $ref: '#/components/schemas/ResponseRequestInUserInput'
         state:
-          type: string
+          type: array
           description: request a specific state
-          example: "welcome_state"
+          example:
+           - "welcome_state1"
+           - "welcome_state2"
+           - "welcome_state3"
         data:
           type:  object
           description: the variables passed to StarChat, they may be used by the analyzers and to complete the templates.
@@ -4314,6 +4317,7 @@ components:
                   between HUMAN_PICKED and HUMAN_REPLY
           * `HUMAN_PICKED` -> When an agent chooses and answer suggestion provided by smartLayer
           * `STARCHAT` -> the answer was provided by StarChat
+          * `CONNECTOR` -> the answer was provided by the connector, usually because starchat doesn't responds
           * `UNSPECIFIED` -> when the information is unset/not applicable
       example: HUMAN_REPLY
       enum:

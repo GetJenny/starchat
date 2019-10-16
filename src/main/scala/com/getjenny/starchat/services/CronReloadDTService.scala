@@ -55,7 +55,7 @@ object CronReloadDTService extends CronService {
                 (dtReloadEntry.indexName, true)
               }
             }
-        indexCheck.filter{case(_, check) => !check}.foreach { case (index, check) =>
+        indexCheck.filter{case(_, check) => !check}.foreach { case (index, _) =>
           val indexMgmRes = indexManagementService.check(index)
           if(indexMgmRes.check) {
             log.error("Index exists but loading results in an error: " + indexMgmRes.message)
@@ -67,7 +67,7 @@ object CronReloadDTService extends CronService {
     }
   }
 
-  def scheduleAction: Unit = {
+  def scheduleAction(): Unit = {
     if (systemIndexManagementService.elasticClient.dtReloadCheckFrequency > 0) {
       val reloadDecisionTableActorRef =
         SCActorSystem.system.actorOf(Props(new ReloadAnalyzersTickActor))

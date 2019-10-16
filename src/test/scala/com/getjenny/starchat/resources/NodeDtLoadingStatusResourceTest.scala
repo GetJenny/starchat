@@ -3,10 +3,8 @@ package com.getjenny.starchat.resources
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
-import com.getjenny.starchat.StarChatService
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.serializers.JsonSupport
 import com.getjenny.starchat.utils.Index
@@ -14,11 +12,11 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
 
-class LanguageGuesserResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
-implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
+class NodeDtLoadingStatusResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
+  implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
 
-  val service: StarChatService = TestFixtures.service
-  val routes: Route = service.routes
+  val service = TestFixtures.service
+  val routes = service.routes
 
   val testAdminCredentials = BasicHttpCredentials("admin", "adminp4ssw0rd")
   val testUserCredentials = BasicHttpCredentials("test_user", "p4ssw0rd")
@@ -66,54 +64,44 @@ implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds
     }
   }
 
-  val languageIterator: Iterator[(String, String)] = {
-    val input_file = getClass.getResourceAsStream("/test_data/language_guesser_test_parameters.csv")
-    val input_data = scala.io.Source.fromInputStream(input_file, "UTF-8").getLines
-    input_data.next() //skip column names
-    new Iterator[(String, String)] {
-      override def hasNext: Boolean = input_data.hasNext
-      override def next(): (String, String) = {
-        val line = input_data.next().split(",")
-        (line(0), line(1))
-      }
-    }
-  }
-
-  for((language, sentence) <- languageIterator) {
-    it should {
-      s"return an HTTP code 200 when checking if '$language' is supported" in {
-        Get(s"/index_getjenny_english_0/language_guesser/$language") ~> addCredentials(testUserCredentials) ~> routes ~> check {
-          status shouldEqual StatusCodes.OK
-          val response = responseAs[LanguageGuesserInformations]
-          response.supportedLanguages should (contain key "languages" and contain value Map(language -> true))
-        }
-      }
-    }
-
-    it should {
-      val languageGuesserRequestIn: LanguageGuesserRequestIn = LanguageGuesserRequestIn(
-        inputText = sentence
-      )
-
-      s"return an HTTP code 200 when guessing '$language' language" in {
-        Post(s"/index_getjenny_english_0/language_guesser", languageGuesserRequestIn) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-          status shouldEqual StatusCodes.OK
-          val response = responseAs[LanguageGuesserRequestOut]
-          response.language should be(language)
-        }
+  it should {
+    "return an HTTP code 200 when getting node status for index" in {
+      val strict = true
+      Get(s"/index_getjenny_english_0/node_dt_update?strict=$strict") ~> addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[ClusterLoadingDtStatusIndex]
+        print(responseEntity)
       }
     }
   }
 
   it should {
-    val languageGuesserRequestIn: LanguageGuesserRequestIn = LanguageGuesserRequestIn(
-      inputText = "I am unauthorized"
-    )
-    val unauthorizedUserCredentials = BasicHttpCredentials("jack", "sparrow")
+    "return an HTTP code 200 when getting node status for all indices" in {
+      val strict = true
+      val verbose = true
+      Get(s"/node_dt_update?strict=$strict&verbose=$verbose") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[NodeLoadingAllDtStatus]
+        print(responseEntity)
+      }
+    }
+  }
 
-    s"return an HTTP code 401 when unauthorized" in {
-      Post(s"/index_getjenny_english_0/language_guesser", languageGuesserRequestIn) ~> addCredentials(unauthorizedUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Unauthorized
+  it should {
+    "return an HTTP code 200 when node status for an index" in {
+      val request = NodeDtLoadingStatus(index = "index_getjenny_english_0")
+      Post(s"/node_dt_update", request) ~>  addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 200 when deleting decision table loading records for dead nodes" in {
+      Delete(s"/node_dt_update") ~>  addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[DeleteDocumentsSummaryResult]
+        println(response)
       }
     }
   }
@@ -135,5 +123,4 @@ implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds
       }
     }
   }
-
 }

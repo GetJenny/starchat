@@ -40,7 +40,10 @@ object TextToDtFeatures extends JsonSupport {
     implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
     val termsFilter = if(params.terms_filter.nonEmpty) {
-      Source.fromFile(params.terms_filter).getLines.map(_.toLowerCase).toSet
+      val bufferedSource = Source.fromFile(params.terms_filter)
+      val termsSet = bufferedSource.getLines.map(_.toLowerCase).toSet
+      bufferedSource.close
+      termsSet
     } else {
       Set[String]()
     }

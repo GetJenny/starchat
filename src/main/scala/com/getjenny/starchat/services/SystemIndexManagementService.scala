@@ -8,6 +8,7 @@ import java.io._
 
 import com.getjenny.starchat.entities.{IndexManagementResponse, _}
 import com.getjenny.starchat.services.esclient.SystemIndexManagementElasticClient
+import com.typesafe.config.{Config, ConfigFactory}
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
 import org.elasticsearch.action.support.master.AcknowledgedResponse
@@ -28,6 +29,7 @@ case class SystemIndexManagementServiceException(message: String = "", cause: Th
   * Implements functions, eventually used by IndexManagementResource, for ES index management
   */
 object SystemIndexManagementService extends AbstractDataService {
+  val config: Config = ConfigFactory.load()
   val elasticClient: SystemIndexManagementElasticClient.type = SystemIndexManagementElasticClient
 
   private[this] val analyzerJsonPath: String = "/index_management/json_index_spec/system/analyzer.json"
@@ -44,16 +46,26 @@ object SystemIndexManagementService extends AbstractDataService {
   private[this] val schemaFiles: List[JsonMappingAnalyzersIndexFiles] = List[JsonMappingAnalyzersIndexFiles](
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/system/user.json",
       updatePath = "/index_management/json_index_spec/system/update/user.json",
-      indexSuffix = elasticClient.userIndexSuffix),
+      indexSuffix = elasticClient.userIndexSuffix,
+      numberOfShards = elasticClient.numberOfShards,
+      numberOfReplicas = elasticClient.numberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/system/refresh_decisiontable.json",
       updatePath = "/index_management/json_index_spec/system/update/refresh_decisiontable.json",
-      indexSuffix = elasticClient.systemRefreshDtIndexSuffix),
+      indexSuffix = elasticClient.systemRefreshDtIndexSuffix,
+      numberOfShards = elasticClient.numberOfShards,
+      numberOfReplicas = elasticClient.numberOfReplicas
+    ),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/system/cluster_nodes.json",
       updatePath = "/index_management/json_index_spec/system/update/cluster_nodes.json",
-      indexSuffix = elasticClient.systemClusterNodesIndexSuffix),
+      indexSuffix = elasticClient.systemClusterNodesIndexSuffix,
+      numberOfShards = elasticClient.numberOfShards,
+      numberOfReplicas = elasticClient.numberOfReplicas),
     JsonMappingAnalyzersIndexFiles(path = "/index_management/json_index_spec/system/decision_table_node_status.json",
       updatePath = "/index_management/json_index_spec/system/update/decision_table_node_status.json",
-      indexSuffix = elasticClient.systemDtNodesStatusIndexSuffix)
+      indexSuffix = elasticClient.systemDtNodesStatusIndexSuffix,
+      numberOfShards = elasticClient.numberOfShards,
+      numberOfReplicas = elasticClient.numberOfReplicas)
   )
 
   def create(indexSuffix: Option[String] = None): Future[IndexManagementResponse] = Future {
@@ -80,8 +92,8 @@ object SystemIndexManagementService extends AbstractDataService {
 
       val createIndexReq = new CreateIndexRequest(fullIndexName).settings(
         Settings.builder().loadFromSource(analyzerJson, XContentType.JSON)
-          .put("index.number_of_shards", elasticClient.numberOfShards)
-          .put("index.number_of_replicas", elasticClient.numberOfReplicas)
+          .put("index.number_of_shards", item.numberOfShards)
+          .put("index.number_of_replicas", item.numberOfReplicas)
         ).source(schemaJson, XContentType.JSON)
 
       val createIndexRes: CreateIndexResponse = client.indices.create(createIndexReq, RequestOptions.DEFAULT)

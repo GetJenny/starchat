@@ -13,13 +13,12 @@ import com.getjenny.starchat.services._
   * Query ElasticSearch
   */
 class SearchAtomic(arguments: List[String], restrictedArgs: Map[String, String]) extends AbstractAtomic {
-  val state: String = arguments.headOption match {
-    case Some(t) => t
-    case _ =>
-      throw ExceptionAtomic("search requires an argument")
-  }
 
-  override def toString: String = "search(\"" + state + "\")"
+  val atomName: String = "search"
+
+  val stateArg: Option[String] = arguments.headOption
+
+  override def toString: String = atomName + "(\"" + stateArg + "\")"
   val isEvaluateNormalized: Boolean = false
 
   override val matchThreshold: Double = 0.65
@@ -27,7 +26,7 @@ class SearchAtomic(arguments: List[String], restrictedArgs: Map[String, String])
   val decisionTableService: DecisionTableService.type = DecisionTableService
 
   def evaluate(query: String, data: AnalyzersDataInternal = AnalyzersDataInternal()): Result = {
-
+    val state = stateArg.getOrElse(data.context.stateName)
     val score = data.data.get("dt_queries_search_result") match {
       case Some(searchResult) =>
         val res = searchResult.asInstanceOf[Map[String, (Float, SearchDTDocument)]]
@@ -39,6 +38,6 @@ class SearchAtomic(arguments: List[String], restrictedArgs: Map[String, String])
       case _ => 0.0d
     }
 
-    Result(score=score)
+    Result(score=score * 1.5d)
   } // returns elasticsearch score of the highest query in queries
 }

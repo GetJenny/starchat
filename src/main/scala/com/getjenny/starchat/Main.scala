@@ -20,8 +20,6 @@ case class Parameters(
                        https_host: String,
                        https_port: Int)
 
-
-
 final class StarChatService(parameters: Option[Parameters] = None) extends RestInterface {
   val params: Parameters = parameters match {
     case Some(p) => p
@@ -55,7 +53,14 @@ final class StarChatService(parameters: Option[Parameters] = None) extends RestI
         SslContext.pkcs12(path, password)
     }
 
-    val https: HttpsConnectionContext = ConnectionContext.https(sslCtx)
+    val https: HttpsConnectionContext = ConnectionContext.https(
+      sslContext = sslCtx,
+      sslConfig = None,
+      enabledCipherSuites = None,
+      enabledProtocols = None,
+      clientAuth = None,
+      sslParameters = None
+    )
 
     Http()
       .bindAndHandleAsync(handler = Route.asyncHandler(routes),
@@ -78,14 +83,18 @@ final class StarChatService(parameters: Option[Parameters] = None) extends RestI
     }
   }
 
+  /* activate cron job for initializing system indices */
+  if(systemIndexManagementService.elasticClient.autoInitializeSystemIndex)
+    cronInitializeSystemIndicesService.scheduleAction()
+
   /* activate cron jobs for data synchronization */
-  cronReloadDTService.scheduleAction
-  cronCleanDTService.scheduleAction
+  cronReloadDTService.scheduleAction()
+  cronCleanDTService.scheduleAction()
 
   /* activate cron jobs for the alive nodes listing */
-  cronCleanDeadNodesService.scheduleAction
-  cronNodeAliveSignalService.scheduleAction
-  cronCleanDtLoadingRecordsService.scheduleAction
+  cronCleanDeadNodesService.scheduleAction()
+  cronNodeAliveSignalService.scheduleAction()
+  cronCleanDtLoadingRecordsService.scheduleAction()
 }
 
 object Main extends App {

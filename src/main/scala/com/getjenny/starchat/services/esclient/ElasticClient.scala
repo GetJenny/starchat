@@ -25,8 +25,6 @@ trait ElasticClient {
   val clusterName: String = config.getString("es.cluster_name")
   val sniff: Boolean = config.getBoolean("es.enable_sniff")
   val ignoreClusterName: Boolean = config.getBoolean("es.ignore_cluster_name")
-  val numberOfShards: Int = config.getInt("es.number_of_shards")
-  val numberOfReplicas: Int = config.getInt("es.number_of_replicas")
   val elasticsearchAuthentication: String = config.getString("es.authentication")
 
   val hostProto: String = config.getString("es.host_proto")
@@ -136,14 +134,12 @@ trait ElasticClient {
   val dtIndexSuffix: String = config.getString("es.dt_index_suffix")
   val kbIndexSuffix: String = config.getString("es.kb_index_suffix")
   val priorDataIndexSuffix: String = config.getString("es.prior_data_index_suffix")
-  val systemRefreshDtIndexSuffix: String = config.getString("es.system_refresh_dt_index_suffix")
+  val termIndexSuffix: String = config.getString("es.term_index_suffix")
 
+  val userIndexSuffix: String = config.getString("es.user_index_suffix")
+  val systemRefreshDtIndexSuffix: String = config.getString("es.system_refresh_dt_index_suffix")
   val systemClusterNodesIndexSuffix: String = "cluster_nodes"
   val systemDtNodesStatusIndexSuffix: String = "decision_table_node_status"
-
-  val termIndexSuffix: String = config.getString("es.term_index_suffix")
-  val feedbackIndexSuffix: String = config.getString("es.feedback_index_suffix")
-  val userIndexSuffix: String = config.getString("es.user_index_suffix")
 
   val enableDeleteIndex: Boolean = config.getBoolean("es.enable_delete_application_index")
   val enableDeleteSystemIndex: Boolean = config.getBoolean("es.enable_delete_system_index")

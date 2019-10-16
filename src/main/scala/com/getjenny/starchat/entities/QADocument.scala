@@ -24,7 +24,7 @@ object Doctypes extends Enumeration {
   NORMAL = Doctypes.Value
 
   /** normal document, can be returned to the user as response */
-  def value(v: String) = values.find(_.toString === v).getOrElse(NORMAL)
+  def value(v: String): Doctypes.Value = values.find(_.toString === v).getOrElse(NORMAL)
 }
 
 object Agent extends Enumeration {
@@ -39,11 +39,14 @@ object Agent extends Enumeration {
   /** When an agent chooses and answer suggestion provided by smartLayer */
   STARCHAT,
 
+  /** The answer was provided by the connector */
+  CONNECTOR,
+
   /** the answer was provided by StarChat */
   UNSPECIFIED = Agent.Value
 
   /** when the information is unset/not applicable */
-  def value(v: String) = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  def value(v: String): Agent.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
 }
 
 object Escalated extends Enumeration {
@@ -54,7 +57,7 @@ object Escalated extends Enumeration {
 
   /** usually in the middle of a conversation this value is not set,
     * it is known at the end of the conversation or when the user requests to escalate. */
-  def value(v: String) = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  def value(v: String): Escalated.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
 }
 
 object Answered extends Enumeration {
@@ -67,7 +70,7 @@ object Answered extends Enumeration {
   UNSPECIFIED = Answered.Value
 
   /** the information is not applicable */
-  def value(v: String) = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  def value(v: String): Answered.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
 }
 
 object Triggered extends Enumeration {
@@ -80,7 +83,7 @@ object Triggered extends Enumeration {
   UNSPECIFIED = Triggered.Value
 
   /** usually this information is not applicable except in the other two cases mentioned before. */
-  def value(v: String) = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  def value(v: String): Triggered.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
 }
 
 object Followup extends Enumeration {
@@ -93,7 +96,7 @@ object Followup extends Enumeration {
   UNSPECIFIED = Followup.Value
 
   /** not applicable */
-  def value(v: String) = values.find(_.toString === v).getOrElse(UNSPECIFIED)
+  def value(v: String): Followup.Value = values.find(_.toString === v).getOrElse(UNSPECIFIED)
 }
 
 

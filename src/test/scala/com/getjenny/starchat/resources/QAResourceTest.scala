@@ -3,8 +3,10 @@ package com.getjenny.starchat.resources
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
+import com.getjenny.starchat.StarChatService
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.serializers.JsonSupport
 import com.getjenny.starchat.utils.Index
@@ -15,8 +17,8 @@ import scala.concurrent.duration._
 class QAResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
   implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
 
-  val service = TestFixtures.service
-  val routes = service.routes
+  val service: StarChatService = TestFixtures.service
+  val routes: Route = service.routes
 
   val testAdminCredentials = BasicHttpCredentials("admin", "adminp4ssw0rd")
   val testUserCredentials = BasicHttpCredentials("test_user", "p4ssw0rd")

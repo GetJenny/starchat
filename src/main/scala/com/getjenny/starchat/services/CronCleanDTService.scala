@@ -32,7 +32,7 @@ object CronCleanDTService extends CronService {
     }
   }
 
-  def scheduleAction: Unit = {
+  def scheduleAction(): Unit = {
     val actorRef =
       SCActorSystem.system.actorOf(Props(new CleanDecisionTablesTickActor))
 

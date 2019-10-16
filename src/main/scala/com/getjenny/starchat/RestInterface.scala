@@ -21,26 +21,27 @@ trait RestInterface extends RootAPIResource
 
   implicit def executionContext: ExecutionContext
 
-  lazy val decisionTableService = DecisionTableService
-  lazy val indexManagementService = IndexManagementService
-  lazy val systemIndexManagementService = SystemIndexManagementService
-  lazy val languageGuesserService = LanguageGuesserService
-  lazy val termService = TermService
-  lazy val responseService = ResponseService
-  lazy val analyzerService = AnalyzerService
-  lazy val userService = UserService
-  lazy val spellcheckService = SpellcheckService
-  lazy val clusterNodesServices = ClusterNodesService
-  lazy val nodeDtLoadingStatusService = NodeDtLoadingStatusService
-  lazy val cronReloadDTService = CronReloadDTService
-  lazy val cronCleanDTService = CronCleanDTService
-  lazy val cronCleanDeadNodesService = CronCleanDeadNodesService
-  lazy val cronNodeAliveSignalService = CronNodeAliveSignalService
-  lazy val cronCleanDtLoadingRecordsService = CronCleanDtLoadingRecordsService
-  lazy val systemService = DtReloadService
-  lazy val knowledgeBaseService = KnowledgeBaseService
-  lazy val conversationLogsService = ConversationLogsService
-  lazy val priorDataService = PriorDataService
+  lazy val decisionTableService: DecisionTableService.type = DecisionTableService
+  lazy val indexManagementService: IndexManagementService.type = IndexManagementService
+  lazy val systemIndexManagementService: SystemIndexManagementService.type = SystemIndexManagementService
+  lazy val languageGuesserService: LanguageGuesserService.type = LanguageGuesserService
+  lazy val termService: TermService.type = TermService
+  lazy val responseService: ResponseService.type = ResponseService
+  lazy val analyzerService: AnalyzerService.type = AnalyzerService
+  lazy val userService: UserService.type = UserService
+  lazy val spellcheckService: SpellcheckService.type = SpellcheckService
+  lazy val clusterNodesServices: ClusterNodesService.type = ClusterNodesService
+  lazy val nodeDtLoadingStatusService: NodeDtLoadingStatusService.type = NodeDtLoadingStatusService
+  lazy val cronReloadDTService: CronReloadDTService.type = CronReloadDTService
+  lazy val cronCleanDTService: CronCleanDTService.type = CronCleanDTService
+  lazy val cronCleanDeadNodesService: CronCleanDeadNodesService.type = CronCleanDeadNodesService
+  lazy val cronNodeAliveSignalService: CronNodeAliveSignalService.type = CronNodeAliveSignalService
+  lazy val cronCleanDtLoadingRecordsService: CronCleanDtLoadingRecordsService.type = CronCleanDtLoadingRecordsService
+  lazy val cronInitializeSystemIndicesService: CronInitializeSystemIndicesService.type = CronInitializeSystemIndicesService
+  lazy val systemService: DtReloadService.type = DtReloadService
+  lazy val knowledgeBaseService: KnowledgeBaseService.type = KnowledgeBaseService
+  lazy val conversationLogsService: ConversationLogsService.type = ConversationLogsService
+  lazy val priorDataService: PriorDataService.type = PriorDataService
 
   val routes: Route = rootAPIsRoutes ~
     LoggingEntities.logRequestAndResultReduced(kbQuestionAnswerRoutes) ~

@@ -14,10 +14,8 @@
         "type": "integer"
       },
       "analyzer": {
-        "type": "keyword",
-        "store": true,
-        "index": true,
-        "null_value": ""
+        "type": "binary",
+        "store": true
       },
       "action_input": {
         "type": "object"

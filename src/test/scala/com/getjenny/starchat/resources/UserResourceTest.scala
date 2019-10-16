@@ -6,17 +6,19 @@ import akka.http.scaladsl.model.headers.BasicHttpCredentials
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
+import com.getjenny.starchat.StarChatService
 import com.getjenny.starchat.entities._
 import com.getjenny.starchat.serializers.JsonSupport
 import com.getjenny.starchat.utils.Index
 import org.scalatest.{Matchers, WordSpec}
+
 import scala.concurrent.duration._
 
 class UserResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
   implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
 
-  val service = TestFixtures.service
-  val routes = service.routes
+  val service: StarChatService = TestFixtures.service
+  val routes: Route = service.routes
 
   val testAdminCredentials = BasicHttpCredentials("admin", "adminp4ssw0rd")
   val userCredentials = BasicHttpCredentials("AzureDiamond", "hunter3")

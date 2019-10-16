@@ -3,7 +3,7 @@ package com.getjenny.starchat.resources
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, Multipart, StatusCodes}
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
-import akka.http.scaladsl.server.{MalformedRequestContentRejection, Route}
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit._
 import com.getjenny.starchat.entities._
@@ -15,7 +15,7 @@ import scala.io.Source.fromResource
 import scala.concurrent.duration._
 
 class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
-  implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
+  implicit def default(implicit system: ActorSystem) = RouteTestTimeout(20.seconds.dilated(system))
 
   val service = TestFixtures.service
   val routes = service.routes
@@ -66,18 +66,19 @@ class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest wi
     }
   }
 
-  "POST /<index_name>/term/index" should {
-    "return an HTTP code 200 with list of terms" in {
+  it should {
+    "return an HTTP code 200 when creating multiple terms" in {
       val terms = Terms(
         terms = List(Term(term = "term1"), Term(term = "term2"))
       )
       Post("/index_getjenny_english_0/term/index?refresh=1", terms) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[UpdateDocumentsResult]
+        val response = responseAs[UpdateDocumentsResult]
+        response.data.length should be (terms.terms.length)
       }
     }
 
-    "return an HTTP code 400 with empty list" in {
+    "return an HTTP code 400 when creating terms with empty list" in {
       Post("/index_getjenny_english_0/term/index", Terms(Nil)) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         val response = responseAs[ReturnMessageData]
@@ -85,40 +86,61 @@ class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest wi
     }
   }
 
-  "POST /<index_name>/term/distance" should {
-    "return an HTTP code 200 when given a list of term ids" in {
-      val ids = DocsIds(List("term1", "term2"))
-      Post("/index_getjenny_english_0/term/distance", ids) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+  it should {
+    "return an HTTP code 200 when calculating term distances with a list of term ids" in {
+      val docsIds = DocsIds(List("term1", "term2"))
+      Post("/index_getjenny_english_0/term/distance", docsIds) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[List[TermsDistanceRes]]
+        response.length should be (docsIds.ids.length)
       }
     }
-    "return an HTTP code 400 with invalid request" in {
-      val request = Set("ids" -> "some")
-      Post("/index_getjenny_english_0/term/distance", request) ~> addCredentials(testUserCredentials) ~> Route.seal(routes) ~> check {
+
+    "return an HTTP code 400 when calculating term distances without payload" in {
+      Post("/index_getjenny_english_0/term/distance") ~> addCredentials(testUserCredentials) ~> Route.seal(routes) ~> check {
         status shouldEqual StatusCodes.BadRequest
-        print(responseEntity)
       }
     }
   }
 
-  "POST /<index_name>/term/index_default_synonyms" should {
-    "return an HTTP code 200 and index default synonyms" in {
+  it should {
+    "return an HTTP code 200 when updating terms" in {
+      val terms = Terms(List(
+        Term(term="term1", synonyms = Some(Map("term2" -> 1.0))),
+        Term(term="term2", synonyms = Some(Map("term1" -> 1.0)))
+      ))
+      Put("/index_getjenny_english_0/term?refresh=1", terms) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[UpdateDocumentsResult]
+        response.data.length should be (terms.terms.length)
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 200 when streaming terms" in {
+      Get("/index_getjenny_english_0/stream/term") ~> addCredentials(testAdminCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[String]
+        response should (equal("""{"synonyms":{"term1":1.0},"term":"term2"}""" + "\n" +
+            """{"synonyms":{"term2":1.0},"term":"term1"}""")
+          or equal("""{"synonyms":{"term2":1.0},"term":"term1"}""" + "\n" +
+            """{"synonyms":{"term1":1.0},"term":"term2"}"""))
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 200 when indexing default synonyms" in {
       Post("/index_getjenny_english_0/term/index_default_synonyms?refresh=1") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         val response = responseAs[UpdateDocumentsResult]
-        response.data.map(_.id)
-      }.andThen(ids =>
-        Post("/index_getjenny_english_0/term/delete?refresh=1", DocsIds(ids)) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-          status shouldEqual StatusCodes.OK
-          val response = responseAs[DeleteDocumentsResult]
-        }
-      )
+      }
     }
   }
 
-  "POST /<index_name>/term/index_synonyms" should {
-    "return an HTTP code 200 and index synonyms from a file" in {
+  it should {
+    "return an HTTP code 200 when indexing synonyms from a file" in {
       val synonyms = fromResource("index_management/json_index_spec/english/synonyms.csv").mkString
       val multipartForm = Multipart.FormData(
         Multipart.FormData.BodyPart.Strict(
@@ -129,71 +151,76 @@ class TermResourceTest extends WordSpec with Matchers with ScalatestRouteTest wi
 
       Post("/index_getjenny_english_0/term/index_synonyms", multipartForm) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[UpdateDocumentsResult]
+        val response = responseAs[UpdateDocumentsResult]
       }
     }
   }
 
-  "POST /<index_name>/term/get" should {
-    "return an HTTP code 200 with an existing term" in {
-      Post("/index_getjenny_english_0/term/get", DocsIds(List("hello"))) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+  it should {
+    "return an HTTP code 200 when getting terms" in {
+      val docsIds = DocsIds(List("hello", "typo"))
+      Post("/index_getjenny_english_0/term/get", docsIds) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[Terms]
+        val response = responseAs[Terms]
+        response.terms.map(_.term) shouldEqual docsIds.ids
       }
     }
   }
 
-  "PUT /<index_name>/term" should {
-    "return an HTTP code 200 with list of term updates" in {
-      val terms = Terms(List(Term(term="term1")))
-      Put("/index_getjenny_english_0/term", terms) ~> addCredentials(testUserCredentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.OK
-        responseAs[UpdateDocumentsResult]
-      }
-    }
-  }
-
-  "POST /<index_name>/term/term" should {
-    "return an HTTP code 200 when searching with term" in {
+  it should {
+    "return an HTTP code 200 when searching term" in {
       val searchTerm = SearchTerm(term = Some("hello"))
       Post("/index_getjenny_english_0/term/term", searchTerm) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        print(responseAs[TermsResults])
+        val response = responseAs[TermsResults]
+        response.hits.terms.headOption.getOrElse(fail("Hits are empty")).term should be ("hello")
       }
     }
   }
 
-  "POST /<index_name>/term/text" should {
-    "return an HTTP code 200 with text input" in {
+  it should {
+    "return an HTTP code 200 when finding terms for given text input" in {
       Post("/index_getjenny_english_0/term/text", "hello, this is my query") ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        print(responseEntity)
+        val response = responseAs[TermsResults]
+        response.hits.terms.map(_.term) should contain ("hello")
       }
-
     }
   }
 
-  "GET /<index_name>/stream/term" should {
-  }
-
-  "POST /<index_name>/term/delete" should {
-    "return an HTTP code 200 when given a list of ids" in {
-      Post("/index_getjenny_english_0/term/delete", DocsIds(List("term1"))) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+  it should {
+    val terms = List("term1", "term2")
+    "return an HTTP code 200 when deleting terms" in {
+      val docsIds = DocsIds(terms)
+      Post("/index_getjenny_english_0/term/delete?refresh=1", docsIds) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        print(responseEntity)
+        val response = responseAs[DeleteDocumentsResult]
+        response.data.length should be(docsIds.ids.length)
       }
     }
 
-    "return an HTTP code 200 when given an empty list and delete all terms" in {
+    "return an HTTP code 200 when searching deleted terms" in {
+      for(term <- terms){
+        val searchTerm = SearchTerm(term = Some(term))
+        Post("/index_getjenny_english_0/term/term", searchTerm) ~> addCredentials(testUserCredentials) ~> routes ~> check {
+          status shouldEqual StatusCodes.OK
+          val response = responseAs[TermsResults]
+          response.total shouldBe 0
+        }
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 200 when deleting all terms" in {
       Post("/index_getjenny_english_0/term/delete?refresh=1", DocsIds(Nil)) ~> addCredentials(testUserCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        print(responseEntity)
+        val response = responseAs[DeleteDocumentsSummaryResult]
       }
     }
-
   }
 
-  "StarChat" should {
+  it should {
     "return an HTTP code 200 when deleting an index" in {
       Delete(s"/index_getjenny_english_0/index_management") ~>  addCredentials(testAdminCredentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK

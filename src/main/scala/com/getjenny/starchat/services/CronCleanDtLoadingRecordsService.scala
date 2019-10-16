@@ -25,7 +25,7 @@ object CronCleanDtLoadingRecordsService extends CronService {
     }
   }
 
-  def scheduleAction: Unit = {
+  def scheduleAction(): Unit = {
     val actorRef =
       SCActorSystem.system.actorOf(Props(new CleanDtLoaingStatusTickActor))
     SCActorSystem.system.scheduler.schedule(

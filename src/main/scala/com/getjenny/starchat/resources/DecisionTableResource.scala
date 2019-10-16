@@ -27,7 +27,7 @@ trait DecisionTableResource extends StarChatResource {
   private[this] val analyzerService: AnalyzerService.type = AnalyzerService
   private[this] val responseService: ResponseService.type = ResponseService
   private[this] val dtReloadService: DtReloadService.type = DtReloadService
-  private[this] val fileTypeRegex: Regex = ("^(csv|json)$").r
+  private[this] val fileTypeRegex: Regex = "^(csv|json)$".r
 
   def decisionTableRoutesAllRoutes: Route = handleExceptions(routesExceptionHandler) {
     pathPrefix(indexRegex ~ Slash ~ "decisiontable" ~ Slash ~ "all") { indexName =>
@@ -88,7 +88,7 @@ trait DecisionTableResource extends StarChatResource {
                       }
                       completeResponse(StatusCodes.BadRequest,
                         Option {
-                          ReturnMessageData(code = 107, message = e.getMessage)
+                          ReturnMessageData(code = 106, message = e.getMessage)
                         })
                   }
               }
@@ -117,7 +117,7 @@ trait DecisionTableResource extends StarChatResource {
                   log.error("index(" + indexName + ") route=decisionTableAsyncReloadRoutes method=POST: " + e.getMessage)
                   completeResponse(StatusCodes.BadRequest,
                     Option {
-                      ReturnMessageData(code = 106, message = e.getMessage)
+                      ReturnMessageData(code = 107, message = e.getMessage)
                     })
               }
             }
@@ -145,7 +145,7 @@ trait DecisionTableResource extends StarChatResource {
                   log.error("index(" + indexName + ") route=decisionTableAnalyzerRoutes method=GET: " + e.getMessage)
                   completeResponse(StatusCodes.BadRequest,
                     Option {
-                      ReturnMessageData(code = 106, message = e.getMessage)
+                      ReturnMessageData(code = 108, message = e.getMessage)
                     })
               }
             }
@@ -170,7 +170,7 @@ trait DecisionTableResource extends StarChatResource {
                         ") route=decisionTableAnalyzerRoutes method=POST: " + e.getMessage)
                       completeResponse(StatusCodes.BadRequest,
                         Option {
-                          ReturnMessageData(code = 107, message = e.getMessage)
+                          ReturnMessageData(code = 109, message = e.getMessage)
                         })
                   }
                 }
@@ -200,7 +200,7 @@ trait DecisionTableResource extends StarChatResource {
                     log.error("index(" + indexName + ") route=decisionTableSearchRoutes method=POST: " + e.getMessage)
                     completeResponse(StatusCodes.BadRequest,
                       Option {
-                        ReturnMessageData(code = 108, message = e.getMessage)
+                        ReturnMessageData(code = 110, message = e.getMessage)
                       })
                 }
               }
@@ -229,7 +229,7 @@ trait DecisionTableResource extends StarChatResource {
                           completeResponse(StatusCodes.ResetContent,
                             Option {
                               ResponseRequestOutOperationResult(
-                                ReturnMessageData(code = 109, message = rsDtNotLoadedE.getMessage),
+                                ReturnMessageData(code = 111, message = rsDtNotLoadedE.getMessage),
                                 Option {
                                   List.empty[ResponseRequestOut]
                                 })
@@ -247,7 +247,7 @@ trait DecisionTableResource extends StarChatResource {
                           completeResponse(StatusCodes.BadRequest,
                             Option {
                               ResponseRequestOutOperationResult(
-                                ReturnMessageData(code = 110, message = message),
+                                ReturnMessageData(code = 112, message = message),
                                 Option {
                                   List.empty[ResponseRequestOut]
                                 })
@@ -260,7 +260,7 @@ trait DecisionTableResource extends StarChatResource {
                           completeResponse(StatusCodes.BadRequest,
                             Option {
                               ResponseRequestOutOperationResult(
-                                ReturnMessageData(code = 111, message = message),
+                                ReturnMessageData(code = 113, message = message),
                                 Option {
                                   List.empty[ResponseRequestOut]
                                 })
@@ -274,7 +274,7 @@ trait DecisionTableResource extends StarChatResource {
                           completeResponse(StatusCodes.RequestTimeout,
                             Option {
                               ResponseRequestOutOperationResult(
-                                ReturnMessageData(code = 112, message = message),
+                                ReturnMessageData(code = 114, message = message),
                                 Option {
                                   List.empty[ResponseRequestOut]
                                 })
@@ -288,7 +288,7 @@ trait DecisionTableResource extends StarChatResource {
                           completeResponse(StatusCodes.BadRequest,
                             Option {
                               ResponseRequestOutOperationResult(
-                                ReturnMessageData(code = 113, message = message),
+                                ReturnMessageData(code = 115, message = message),
                                 Option {
                                   List.empty[ResponseRequestOut]
                                 })
@@ -328,7 +328,7 @@ trait DecisionTableResource extends StarChatResource {
                       log.error("index(" + indexName + ") route=decisionTableRoutes method=POST: " + e.getMessage)
                       completeResponse(StatusCodes.BadRequest,
                         Option {
-                          ReturnMessageData(code = 100, message = e.getMessage)
+                          ReturnMessageData(code = 116, message = e.getMessage)
                         })
                   }
                 }
@@ -353,7 +353,7 @@ trait DecisionTableResource extends StarChatResource {
                         log.error("index(" + indexName + ") route=decisionTableRoutes method=GET: " + e.getMessage)
                         completeResponse(StatusCodes.BadRequest,
                           Option {
-                            ReturnMessageData(code = 101, message = e.getMessage)
+                            ReturnMessageData(code = 117, message = e.getMessage)
                           })
                     }
                   } else {
@@ -367,7 +367,7 @@ trait DecisionTableResource extends StarChatResource {
                         log.error("index(" + indexName + ") route=decisionTableRoutes method=GET: " + e.getMessage)
                         completeResponse(StatusCodes.BadRequest,
                           Option {
-                            ReturnMessageData(code = 102, message = e.getMessage)
+                            ReturnMessageData(code = 118, message = e.getMessage)
                           })
                     }
                   }
@@ -391,7 +391,7 @@ trait DecisionTableResource extends StarChatResource {
                       log.error("index(" + indexName + ") route=decisionTableRoutes method=DELETE : " + e.getMessage)
                       completeResponse(StatusCodes.BadRequest,
                         Option {
-                          ReturnMessageData(code = 104, message = e.getMessage)
+                          ReturnMessageData(code = 119, message = e.getMessage)
                         })
                   }
                 }
@@ -416,7 +416,7 @@ trait DecisionTableResource extends StarChatResource {
                       log.error("index(" + indexName + ") route=decisionTableRoutes method=PUT : " + e.getMessage)
                       completeResponse(StatusCodes.BadRequest,
                         Option {
-                          ReturnMessageData(code = 104, message = e.getMessage)
+                          ReturnMessageData(code = 120, message = e.getMessage)
                         })
                   }
                 }

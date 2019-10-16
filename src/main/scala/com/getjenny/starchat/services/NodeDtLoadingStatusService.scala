@@ -43,9 +43,10 @@ object NodeDtLoadingStatusService extends AbstractDataService {
 
   def update(dtNodeStatus: NodeDtLoadingStatus, refresh: Int = 0): Unit = {
     val client: RestHighLevelClient = elasticClient.httpClient
-    val uuid = calcUuid(dtNodeStatus.uuid)
+    val uuid = calcUuid(dtNodeStatus.uuid.getOrElse(""))
     val id = calcId(dtNodeStatus.index, uuid)
-    val timestamp = if (dtNodeStatus.timestamp <= 0) System.currentTimeMillis else dtNodeStatus.timestamp
+    val timestamp = if (dtNodeStatus.timestamp.getOrElse(0: Long) <= 0)
+      System.currentTimeMillis else dtNodeStatus.timestamp.getOrElse(0: Long)
     val builder : XContentBuilder = jsonBuilder().startObject()
 
     builder.field("uuid", uuid)
@@ -109,7 +110,7 @@ object NodeDtLoadingStatusService extends AbstractDataService {
         case _ => throw NodeDtLoadingStatusServiceException("Failed to get timestamp for the index: " + dtIndexName)
       }
 
-      NodeDtLoadingStatus(uuid = uuid, index = index, timestamp = timestamp)
+      NodeDtLoadingStatus(uuid = Some{uuid}, index = index, timestamp = Some{timestamp})
     }
   }
 
@@ -141,7 +142,8 @@ object NodeDtLoadingStatusService extends AbstractDataService {
     val aliveNodes = clusterNodesService.aliveNodes.nodes.map(_.uuid).toSet // all alive nodes
     val indexPushTimestamp = dtReloadService.dTReloadTimestamp(index) // push timestamp for the index
     val nodeDtLoadingStatus = // update operations for the index
-      dtUpdateStatusByIndex(dtIndexName = index, minTs = indexPushTimestamp.timestamp).map(_.uuid).toSet
+      dtUpdateStatusByIndex(dtIndexName = index, minTs = indexPushTimestamp.timestamp)
+        .map(_.uuid.getOrElse("")).toSet
     val updatedSet = aliveNodes & nodeDtLoadingStatus
     val updateCompleted = updatedSet === aliveNodes
 
