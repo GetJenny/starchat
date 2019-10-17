@@ -44,7 +44,7 @@ trait DecisionTableResource extends StarChatResource {
                 case Success(t) =>
                   completeResponse(StatusCodes.OK, StatusCodes.BadRequest, t)
                 case Failure(e) =>
-                  log.error("index(" + indexName + ") route=decisionTableRoutes method=DELETE : " + e.getMessage)
+                  log.error("user(" + user + ") index(" + indexName + ") route=decisionTableRoutes method=DELETE : " + e.getMessage)
                   completeResponse(StatusCodes.BadRequest,
                     Option {
                       ReturnMessageData(code = 105, message = e.getMessage)

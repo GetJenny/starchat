@@ -31,7 +31,7 @@ trait AnalyzersPlaygroundResource extends StarChatResource {
                   case Success(value) =>
                     completeResponse(StatusCodes.OK, StatusCodes.BadRequest, value)
                   case Failure(e) =>
-                    log.error("index(" + indexName + ") route=analyzersPlaygroundRoutes method=POST: " + e.getMessage)
+                    log.error("user(" + user + ")index(" + indexName + ") route=analyzersPlaygroundRoutes method=POST: " + e.getMessage)
                     completeResponse(StatusCodes.BadRequest,
                       Option {
                         ReturnMessageData(code = 100, message = e.getMessage)

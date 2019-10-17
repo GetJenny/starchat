@@ -7,14 +7,7 @@ maintainer := "angelo@getjenny.com"
 
 crossScalaVersions := Seq("2.12.8")
 
-resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-  Resolver.bintrayRepo("hseeberger", "maven"))
-
-resolvers +=
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-
-resolvers +=
-  "Sonatype OSS Releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
 
 val scalaJSVersion = "0.6.27"
