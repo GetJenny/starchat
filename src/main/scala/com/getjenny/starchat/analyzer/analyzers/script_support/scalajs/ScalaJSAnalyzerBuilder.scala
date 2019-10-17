@@ -5,9 +5,8 @@ import com.getjenny.starchat.analyzer.analyzers.AbstractAnalyzerBuilder
 import javax.script.{Compilable, ScriptEngine, ScriptEngineManager}
 import org.scalajs.core.tools.io.IRFileCache.VirtualRelativeIRFile
 import org.scalajs.core.tools.io.{MemVirtualSerializedScalaJSIRFile, VirtualScalaJSIRFile, WritableMemVirtualJSFile}
-import org.scalajs.core.tools.linker.StandardLinker
+import org.scalajs.core.tools.linker.{ModuleInitializer, StandardLinker}
 import org.scalajs.core.tools.logging.ScalaConsoleLogger
-import org.scalajs.core.tools.sem.Semantics
 
 import scala.reflect.io
 import scala.reflect.io.VirtualDirectory
@@ -40,12 +39,13 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     def template(script: String): String =
       f"""
         |import scalajs.js
+        |import scala.scalajs.js.Dynamic.{global => g}
         |
-        |@js.annotation.JSExportTopLevel("ScalaJSAnalzer")
         |object ScalaJSAnalyzer {
-        |  @js.annotation.JSExport
-        |  def main = {
-        |    $script
+        |  def main() = {
+        |    g.analyzer = (sentence: String, analyzersDataInternal: js.Dynamic, restrictedArgs: js.Dynamic) => {
+        |      $script
+        |    }
         |  }
         |}
         |""".stripMargin
@@ -65,12 +65,14 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
         compiler = new Compiler()
         throw e
     }
-    val javaScript = Try(processor.process(sjsirFiles)) match {
+    val moduleInitializer =  ModuleInitializer.mainMethod("ScalaJSAnalyzer","main")
+    val javaScript = Try(processor.process(sjsirFiles, moduleInitializer: ModuleInitializer)) match {
       case Success(value) => value
       case Failure(e) =>
         processor = new Processor()
         throw e
     }
+
     val compiledScript = engine.compile(javaScript)
     new ScalaJSAnalyzer(compiledScript, restrictedArgs)
   }
@@ -125,17 +127,19 @@ object ScalaJSAnalyzerBuilder extends AbstractAnalyzerBuilder {
     */
   private[this] class Processor {
     private[this] val linkerConfig = StandardLinker.Config()
-      .withSemantics(Semantics.Defaults.optimized)
       .withSourceMap(false)
+      /*
+      .withSemantics(Semantics.Defaults.optimized)
       .withClosureCompilerIfAvailable(true)
-      .withOptimizer(true)
+       */
+
     private[this] val linker = StandardLinker(linkerConfig)
     private[this] val logger = new ScalaConsoleLogger() // use different logger?
 
-    def process(sjsirFiles: Seq[VirtualScalaJSIRFile]): String = {
+    def process(sjsirFiles: Seq[VirtualScalaJSIRFile], moduleInitializer: ModuleInitializer): String = {
       val output = WritableMemVirtualJSFile("output.js")
       linker.link(sjsirFiles,
-        Nil,
+        Seq(moduleInitializer),
         output,
         logger
       )
