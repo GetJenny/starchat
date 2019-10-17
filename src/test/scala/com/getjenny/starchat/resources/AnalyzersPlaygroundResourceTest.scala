@@ -14,6 +14,7 @@ import com.getjenny.starchat.utils.Index
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
+import scala.io.Source
 
 class AnalyzersPlaygroundResourceTest extends WordSpec with Matchers with ScalatestRouteTest with JsonSupport {
   implicit def default(implicit system: ActorSystem) = RouteTestTimeout(10.seconds.dilated(system))
@@ -369,6 +370,107 @@ class AnalyzersPlaygroundResourceTest extends WordSpec with Matchers with Scalat
         response.data.getOrElse(fail).traversedStates should be (Vector("one", "two"))
         response.data.getOrElse(fail).extractedVariables("lng") should be ("en")
         response.value should be (0)
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 400 when evaluating a ScalaJS analyzer that throws an evaluation error" in {
+      val analyzerData = AnalyzersData(traversedStates=Vector("one", "two"),
+        extractedVariables =
+          Map[String, String](
+            "month.0" -> "11",
+            "day.0" -> "31",
+            "year.0" -> "1900"))
+
+      val evaluateRequest: AnalyzerEvaluateRequest =
+        AnalyzerEvaluateRequest(
+          query = "my name is Jenny",
+          analyzer =
+            """type/SCALAJS
+              |import scala.scalajs.js.Dynamic.{ global => g}
+              |
+              |object ScalaJSAnalyzer {
+              |  def main(args: Array[String]) = {
+              |    g.Java.applyDynamic("type")("type.not.found")
+              |  }
+              |}
+            """.stripMargin,
+          data = Option{
+            analyzerData
+          }
+        )
+
+      Post(s"/index_getjenny_english_0/analyzer/playground", evaluateRequest) ~>
+        addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+  }
+
+  it should {
+    "return an HTTP code 400 when evaluating a ScalaJS analyzer that throws an compiler error" in {
+      val analyzerData = AnalyzersData(traversedStates=Vector("one", "two"),
+        extractedVariables =
+          Map[String, String](
+            "month.0" -> "11",
+            "day.0" -> "31",
+            "year.0" -> "1900"))
+
+      val evaluateRequest: AnalyzerEvaluateRequest =
+        AnalyzerEvaluateRequest(
+          query = "my name is Jenny",
+          analyzer =
+            """type/SCALAJS
+              |import scala.scalajs.js.Dynamic.{ global => g}
+              |
+              |object ScalaJSAnalyzer {
+              |  def main(args: Array[String]) = {
+              |    def fun() = {
+              |  }
+              |}
+            """.stripMargin,
+          data = Option{
+            analyzerData
+          }
+        )
+
+      Post(s"/index_getjenny_english_0/analyzer/playground", evaluateRequest) ~>
+        addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+  }
+
+  it should {
+    val script = Source.fromResource("test_data/script.scala").getLines().mkString("\n")
+
+    "return an HTTP code 200 when evaluating a ScalaJS analyzer" in {
+      val analyzerData = AnalyzersData(traversedStates=Vector("one", "two"),
+        extractedVariables =
+          Map[String, String](
+            "month.0" -> "11",
+            "day.0" -> "31",
+            "year.0" -> "1900"))
+
+      val evaluateRequest: AnalyzerEvaluateRequest =
+        AnalyzerEvaluateRequest(
+          query = "my name is Jenny",
+          analyzer = "type/SCALAJS\n"+script,
+          data = Option{
+            analyzerData
+          }
+        )
+
+      Post(s"/index_getjenny_english_0/analyzer/playground", evaluateRequest) ~>
+        addCredentials(testUserCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[AnalyzerEvaluateResponse]
+        response.build should be (true)
+        response.buildMessage should be ("success")
+        response.value should be (1)
+        response.data.getOrElse(fail("no AnalyzerData")) should be (analyzerData.copy(
+          extractedVariables = analyzerData.extractedVariables + ("name" -> "Jenny")))
       }
     }
   }

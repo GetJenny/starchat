@@ -1,4 +1,4 @@
-import NativePackagerHelper._
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper._
 import com.typesafe.sbt.packager.docker._
 
 name := "StarChat"
@@ -8,6 +8,10 @@ maintainer := "angelo@getjenny.com"
 crossScalaVersions := Seq("2.12.8")
 
 resolvers += Resolver.bintrayRepo("hseeberger", "maven")
+
+
+val scalaJSVersion = "0.6.27"
+val scalaVersionForScalaJSCompiler = "2.12.8"
 
 libraryDependencies ++= {
   val AkkaHttpVersion	= "10.1.9"
@@ -24,6 +28,9 @@ libraryDependencies ++= {
   val StanfordCoreNLP = "3.9.2"
   val AnalyzerVersion = "2.0.1"
   val CourierVersion = "1.0.0"
+  val snappyJavaVersion = "1.1.2.6"
+  val upickleVersion = "0.4.4"
+  val larrayVersion = "0.4.0"
   Seq(
     "com.getjenny" %% "manaus-lib" % ManausLibVersion,
     "com.getjenny" %% "analyzer" % AnalyzerVersion,
@@ -51,9 +58,37 @@ libraryDependencies ++= {
     "org.scalanlp" %% "breeze-natives" % BreezeVersion,
     "org.scalatest" %% "scalatest" % ScalatestVersion % Test,
     "org.scalaz" %% "scalaz-core" % ScalazVersion,
-    "com.github.daddykotex" %% "courier" % CourierVersion
+    "com.github.daddykotex" %% "courier" % CourierVersion,
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+    "org.scala-js" % "scalajs-compiler_2.12.8" % scalaJSVersion,
+    "org.scala-js" %% "scalajs-tools" % scalaJSVersion,
+    "com.lihaoyi" %% "upickle" % upickleVersion,
+    "org.xerial.snappy" % "snappy-java" % snappyJavaVersion,
+    "org.xerial.larray" %% "larray" % larrayVersion
   )
 }
+lazy val scalaJSCompilerLibs = project
+  .settings(
+    scalaVersion := scalaVersionForScalaJSCompiler,
+    libraryDependencies ++= {
+      Seq(
+        "org.scala-js" %% "scalajs-library" % scalaJSVersion
+      )
+    }
+  )
+
+(Compile / resources) ++= (scalaJSCompilerLibs / Compile / managedClasspath).value.map(_.data)
+(Compile / resourceGenerators) += Def.task {
+      // build and store a version property file
+      val file = (Compile / resourceManaged).value / "version.properties"
+      val contents =
+        s"""
+           |scalaVersion=$scalaVersionForScalaJSCompiler
+           |scalaJSVersion=$scalaJSVersion
+           |""".stripMargin
+      IO.write(file, contents)
+      Seq(file)
+    }.taskValue
 
 scalacOptions += "-deprecation"
 scalacOptions += "-feature"
@@ -76,6 +111,7 @@ dockerCommands := Seq(
   Cmd("RUN", "apk", "update"),
   Cmd("RUN", "apk", "add", "bash"),
   Cmd("RUN", "apk", "add", "curl"),
+  Cmd("RUN", "ln", "-sf", "/lib/libc.musl-x86_64.so.1", "/lib/ld-linux-x86-64.so.2"),
   Cmd("RUN", "addgroup", "-S", "starchat", "&&", "adduser", "-S", "starchat", "-G", "starchat"),
   Cmd("USER", "starchat:starchat"),
   Cmd("LABEL", "maintainer=\"Angelo Leto <angelo@getjenny.com>\""),

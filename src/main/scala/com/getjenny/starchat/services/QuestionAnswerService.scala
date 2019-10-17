@@ -4,7 +4,7 @@ package com.getjenny.starchat.services
   * Created by Angelo Leto <angelo@getjenny.com> on 01/07/16.
   */
 
-import java.time.{ZoneId, ZoneOffset}
+import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
 
 import akka.event.{Logging, LoggingAdapter}
 import com.getjenny.analyzer.util.{RandomNumbers, Time}
@@ -34,7 +34,7 @@ import org.elasticsearch.search.aggregations.metrics.{Avg, Cardinality, Sum}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.{FieldSortBuilder, ScoreSortBuilder, SortOrder}
 import scalaz.Scalaz._
-import java.time.ZonedDateTime
+
 import scala.collection.JavaConverters._
 import scala.collection.immutable.{List, Map}
 import scala.collection.mutable
