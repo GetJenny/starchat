@@ -57,14 +57,14 @@ case class ActiveAnalyzers(
 object AnalyzerService extends AbstractDataService {
   override val elasticClient: DecisionTableElasticClient.type = DecisionTableElasticClient
   private[this] val analyzerBuilderFactory: AnalyzerBuilderFactory.type = AnalyzerBuilderFactory
-  private[this] val parseAnalyzer: String => (ScriptEngines.Value, String) = {
+  private[this] def parseAnalyzer(analyzerString: String): (ScriptEngines.Value, String) = {
     val pattern = """^type\/(\w+)\n([\s\S]*)$""".r
-    analyzer: String => Try {
-      val pattern(mimeType, declaration) = analyzer
+    Try {
+      val pattern(mimeType, declaration) = analyzerString
       (ScriptEngines.value(mimeType), declaration)
     } match {
       case Success(res) => res
-      case Failure(_) => (ScriptEngines.GJANALYZERS, analyzer)
+      case Failure(_) => (ScriptEngines.GJANALYZERS, analyzerString)
     }
   }
 
@@ -104,7 +104,7 @@ object AnalyzerService extends AbstractDataService {
         val version : Long = item.getVersion
         val source : Map[String, Any] = item.getSourceAsMap.asScala.toMap
 
-        val analyzerDeclaration : String = source.get("analyzer") match {
+        val analyzer : String = source.get("analyzer") match {
           case Some(t) => Base64.decode(t.asInstanceOf[String])
           case _ => ""
         }
