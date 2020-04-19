@@ -12,7 +12,7 @@ import akka.pattern.CircuitBreaker
 import com.getjenny.analyzer.analyzers.AnalyzerEvaluationException
 import com.getjenny.starchat.entities.io
 import com.getjenny.starchat.entities.io._
-import com.getjenny.starchat.entities.persistents.{DTDocument, DTDocumentUpdate}
+import com.getjenny.starchat.entities.persistents.{DTDocument, DTDocumentUpdate, SuggestedQuery}
 import com.getjenny.starchat.routing._
 import com.getjenny.starchat.services._
 import scalaz.Scalaz._
@@ -29,6 +29,7 @@ trait DecisionTableResource extends StarChatResource {
   private[this] val responseService: ResponseService.type = ResponseService
   private[this] val dtReloadService: InstanceRegistryService.type = InstanceRegistryService
   private[this] val bayesOperatorCacheService: BayesOperatorCacheService.type = BayesOperatorCacheService
+  private[this] val autoCompleteService: AutoCompleteService.type  = AutoCompleteService
   private[this] val fileTypeRegex: Regex = "^(csv|json)$".r
 
   def decisionTableCloneIndexRoutes: Route = handleExceptions(routesExceptionHandler) {
@@ -447,6 +448,51 @@ trait DecisionTableResource extends StarChatResource {
     }
   }
 
+  def decisionTableAutoCompleteRequestRoutes: Route = handleExceptions(routesExceptionHandler) {
+    pathPrefix(indexRegex ~ Slash ~ "autocomplete") { indexName =>
+      pathEnd {
+        post {
+          authenticateBasicAsync(realm = authRealm,
+            authenticator = authenticator.authenticator) { user =>
+            authorizeAsync(_ =>
+              authenticator.hasPermissions(user, indexName, Permissions.read)) {
+              extractRequest { request =>
+                entity(as[AutoCompleteRequest]) {
+                  autoComplete_request =>
+                    val breaker: CircuitBreaker = StarChatCircuitBreaker.getCircuitBreaker()
+                    onCompleteWithBreakerFuture(breaker)(autoCompleteService.autoComplete(indexName, autoComplete_request)) {
+                      case Failure(e) =>
+                        e match {
+                          case e@(_: CircuitBreakerOpenRejection) =>
+                            val message = logTemplate(user.id, indexName, "decisionTableResource", request.method,
+                              request.uri, "The request the takes too much time")
+                            log.error(message, e)
+                            completeResponse(StatusCodes.RequestTimeout,
+                              Option {
+                                io.AutoCompleteResponse(0, 0, List.empty[SuggestedQuery])
+                              }
+                            )
+                          case NonFatal(nonFatalE) =>
+                            val message = logTemplate(user.id, indexName, "decisionTableResource", request.method,
+                              request.uri, "Unable to complete the request")
+                            log.error(message, e)
+                            completeResponse(StatusCodes.BadRequest,
+                              Option {
+                                io.AutoCompleteResponse(0, 0, List.empty[SuggestedQuery])
+                              }
+                            )
+                        }
+                      case Success(responseValue) =>
+                        completeResponse(StatusCodes.OK, StatusCodes.BadRequest, Option(responseValue))
+                    }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   def decisionTableRoutes: Route = handleExceptions(routesExceptionHandler) {
     pathPrefix(indexRegex ~ Slash ~ "decisiontable") { indexName =>
       pathEnd {

@@ -15,6 +15,7 @@ import org.elasticsearch.rest.RestStatus
 import org.elasticsearch.script.Script
 import org.elasticsearch.search.aggregations.AggregationBuilder
 import org.elasticsearch.search.sort.SortBuilder
+import org.elasticsearch.search.suggest.SuggestBuilder
 import scalaz.Scalaz._
 
 import scala.collection.JavaConverters._
@@ -55,6 +56,23 @@ class IndexLanguageCrud private(val client: ElasticClient, val index: String, va
       scrollTime, version, fetchSource)
     entityManager.from(response)
   }
+
+  def suggest[T](suggestBuilder: SuggestBuilder,
+                 maxItems: Option[Int] = None,
+                 searchType: SearchType = SearchType.DEFAULT,
+                 requestCache: Option[Boolean] = None,
+                 minScore: Option[Float] = None,
+                 scroll: Boolean = false,
+                 scrollTime: Long = 60000,
+                 version: Option[Boolean] = None,
+                 fetchSource: Option[Array[String]] = None, entityManager: ReadEntityManager[T]): List[T] = {
+
+    val response = esCrudBase.suggest(suggestBuilder, maxItems, searchType,
+      requestCache, minScore, scroll, scrollTime, version, fetchSource)
+    entityManager.from(response)
+  }
+
+
 
   def scroll[T](queryBuilder: QueryBuilder,
                 from: Option[Int] = None,
