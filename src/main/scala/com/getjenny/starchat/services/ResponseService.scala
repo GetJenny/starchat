@@ -39,6 +39,7 @@ object ResponseService extends AbstractDataService {
   override val elasticClient: DecisionTableElasticClient.type = DecisionTableElasticClient
   private[this] val log: LoggingAdapter = Logging(SCActorSystem.system, this.getClass.getCanonicalName)
   private[this] val decisionTableService: DecisionTableService.type = DecisionTableService
+  private[this] val matchTemplateRegex = "%([^%]*)%"
 
   private[this] def extractRequiredStarChatVarNames(input: String): Set[StarChatVariables.Value] = {
     StarChatVariables.values.map(name => (name, input contains "%" + name.toString + "%"))
@@ -65,16 +66,16 @@ object ResponseService extends AbstractDataService {
     val conversationLogsService: ConversationLogsService.type = ConversationLogsService
     variables.map {
       case StarChatVariables.GJ_CONV_FEEDBACK_SCORE =>
-        val ids = DocsIds(ids=List(request.conversationId))
+        val ids = DocsIds(ids = List(request.conversationId))
         val feedbackConvScore =
           conversationLogsService.conversations(indexName, ids).conversations.headOption match {
             case Some(value) =>
               value.docs.map(c =>
-              c.annotations match {
-                case Some(annotations) =>
-                  annotations.feedbackConvScore.getOrElse(-1.0d)
-                case _ => -1.0d
-              }).headOption.getOrElse(-1.0d)
+                c.annotations match {
+                  case Some(annotations) =>
+                    annotations.feedbackConvScore.getOrElse(-1.0d)
+                  case _ => -1.0d
+                }).headOption.getOrElse(-1.0d)
             case _ => -1.0d
           }
         (StarChatVariables.GJ_CONV_FEEDBACK_SCORE.toString, feedbackConvScore.toString)
@@ -84,7 +85,7 @@ object ResponseService extends AbstractDataService {
         (StarChatVariables.GJ_LAST_USER_INPUT_TEXT.toString,
           request.userInput.getOrElse(ResponseRequestInUserInput()).text.getOrElse(""))
       case StarChatVariables.GJ_CONVERSATION_V1 =>
-        val ids = DocsIds(ids=List(request.conversationId))
+        val ids = DocsIds(ids = List(request.conversationId))
         val conversation =
           conversationLogsService.conversations(indexName, ids).conversations.headOption match {
             case Some(value) => value.docs.map(c =>
@@ -118,11 +119,11 @@ object ResponseService extends AbstractDataService {
         document.failureValue
 
       val completeData = document.data ++ actionResult.data
-      if(state.isEmpty || state === document.state) { // avoiding recursive state fetch.
+      if (state.isEmpty || state === document.state) { // avoiding recursive state fetch.
         List(document.copy(
           actionResult = Option(actionResult),
           data = completeData,
-          score = if(actionResult.success) 1.0 else 0)
+          score = if (actionResult.success) 1.0 else 0)
         )
       } else {
         getNextResponse(indexName,
@@ -256,15 +257,15 @@ object ResponseService extends AbstractDataService {
           val analyzer: String = item.analyzer.declaration
           val stateData: Map[String, String] = item.stateData
 
-          val merged = searchResAnalyzers.extractedVariables ++ evaluationRes.data.extractedVariables
+          val mergedVariables = searchResAnalyzers.extractedVariables ++ evaluationRes.data.extractedVariables
           val randomizedBubbleValue = randomizeBubble(item.bubble)
-          val bubble = replaceTemplates(randomizedBubbleValue, merged)
-          val action = replaceTemplates(item.action, merged) //FIXME: action shouldn't contain templates
+          val bubble = replaceTemplates(randomizedBubbleValue, mergedVariables)
+          val action = replaceTemplates(item.action, mergedVariables) //FIXME: action shouldn't contain templates
 
-          val onDemandStarChatVariables = merged ++ extractSCVariables(indexName, item.actionInput, request)
+          val onDemandStarChatVariables = mergedVariables ++ extractSCVariables(indexName, item.actionInput, request)
           val actionInput = replaceTemplates(item.actionInput, onDemandStarChatVariables)
 
-          val cleanedData = merged.filter { case (key, _) => !(key matches "\\A__temp__.*") }
+          val cleanedData = mergedVariables.filter { case (key, _) => !(key matches "\\A__temp__.*") }
 
           val traversedStatesUpdated: Vector[String] = traversedStates ++ Vector(state)
           ResponseRequestOut(conversationId = conversationId,
@@ -296,11 +297,13 @@ object ResponseService extends AbstractDataService {
   }
 
   private[this] def escapeJson(input: String): String = JsString(input).toString.replaceAll("^\"|\"$", "")
+
   private[this] def replaceTemplates(input: String, values: Map[String, String]): String = {
-    values.foldLeft(input) {
+    val substitutedString = values.foldLeft(input) {
       case (b, (k, v)) =>
         b.replaceAllLiterally("%" + k + "%", escapeJson(v))
     }
+    clearNonSubstitutedTemplates(substitutedString)
   }
 
   private[this] def replaceTemplates(input: Seq[JsObject],
@@ -309,8 +312,14 @@ object ResponseService extends AbstractDataService {
       val jsonObjString = values.foldLeft(item.toString) { case (acc, (replKey, replValue)) =>
         acc.replaceAllLiterally("%" + replKey + "%", escapeJson(replValue))
       }
-      jsonObjString.parseJson.asJsObject
+      clearNonSubstitutedTemplates(jsonObjString)
+        .parseJson
+        .asJsObject
     }
+  }
+
+  private[this] def clearNonSubstitutedTemplates(input: String): String = {
+    input.replaceAll(matchTemplateRegex, "")
   }
 
   private[this] def randomizeBubble(bubble: String): String = {
