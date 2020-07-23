@@ -7,18 +7,18 @@ import scalaz.Scalaz._
  * Created by angelo on 18/01/2018.
  */
 
-class TestReinfConj(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
+class TestReinfConjunctionOperator(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
   override def toString: String = "TestReinfConj(" + children.mkString(", ") + ")"
   def add(e: Expression, level: Int = 0): AbstractOperator = {
     if (level === 0) {
-      new TestReinfConj(e :: children)
+      new TestReinfConjunctionOperator(e :: children)
     } else if(children.isEmpty){
       throw OperatorException("TestReinfConj children list is empty")
     } else {
       children.headOption match {
         case Some(t) =>
           t match {
-            case c: AbstractOperator => new TestReinfConj(c.add(e, level - 1) :: children.tail)
+            case c: AbstractOperator => new TestReinfConjunctionOperator(c.add(e, level - 1) :: children.tail)
             case _ => throw OperatorException("TestReinfConj: trying to add to smt else than an operator")
           }
         case _ =>

@@ -49,7 +49,7 @@ class StarchatFactoryOperator extends OperatorFactoryTrait[List[Expression], Abs
     case "gt" => new GtOperator(argument)
     case "lte" => new LteOperator(argument)
     case "gte" => new GteOperator(argument)
-    case "reinfConjunction" => new TestReinfConj(argument)
+    case "reinfConjunction" => new TestReinfConjunctionOperator(argument)
     case "bayes" => new BayesOperator(argument)
     case _ => throw OperatorNotFoundException("Operator \'" + name + "\' not found")
   }
