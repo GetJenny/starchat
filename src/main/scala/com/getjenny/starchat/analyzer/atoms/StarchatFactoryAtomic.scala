@@ -51,7 +51,6 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     "similarState",
     "submitHubspot",
     "synonym",
-    "synonymCosine",
     "timeBetween",
     "toDouble",
     "vOneKeyword",

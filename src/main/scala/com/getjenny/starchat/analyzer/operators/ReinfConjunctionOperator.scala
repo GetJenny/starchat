@@ -38,7 +38,7 @@ class ReinfConjunctionOperator(children: List[Expression]) extends AbstractOpera
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
             extractedVariables = analyzersDataInternal.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override pre-existing elements
-            data = res.data.data
+            data = analyzersDataInternal.data ++ res.data.data
           )
         )
       } else {
@@ -52,7 +52,7 @@ class ReinfConjunctionOperator(children: List[Expression]) extends AbstractOpera
               context = analyzersDataInternal.context,
               traversedStates = analyzersDataInternal.traversedStates,
               extractedVariables = val2.data.extractedVariables ++ val1.data.extractedVariables, // order is important, as var1 elements must override var2 existing elements
-              data = analyzersDataInternal.data ++ val1.data.data ++ val2.data.data
+              data = val2.data.data ++ val1.data.data
             )
           )
         } else {
