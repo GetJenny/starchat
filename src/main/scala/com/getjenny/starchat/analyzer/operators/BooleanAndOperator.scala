@@ -5,33 +5,30 @@ import com.getjenny.analyzer.operators._
 import scalaz.Scalaz._
 
 /**
- * Created by michele boggia on 24/07/2020.
+ * Created by mal on 21/02/2017.
  */
 
-class ConjunctionOperator(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
-  override def toString: String = "ConjunctionOperator(" + children.mkString(", ") + ")"
+class BooleanAndOperator(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
+  override def toString: String = "BooleanAndOperator(" + children.mkString(", ") + ")"
   def add(e: Expression, level: Int = 0): AbstractOperator = {
-    if (level === 0) {
-      new ConjunctionOperator(e :: children)
-    } else if(children.isEmpty){
-      throw OperatorException("ConjunctionOperator: children list is empty")
-    } else {
+    if (level === 0) new BooleanAndOperator(e :: children)
+    else {
       children.headOption match {
         case Some(t) =>
           t match {
-            case c: AbstractOperator => new ConjunctionOperator(c.add(e, level - 1) :: children.tail)
-            case _ => throw OperatorException("ConjunctionOperator: trying to add to smt else than an operator")
+            case c: AbstractOperator => new BooleanAndOperator(c.add(e, level - 1) :: children.tail)
+            case _ => throw OperatorException("BooleanAndOperator: trying to add to smt else than an operator")
           }
-        case _ => throw OperatorException("ConjunctionOperator: trying to add None instead of an operator")
-
+        case _ =>
+          throw OperatorException("BooleanAndOperator: trying to add None instead of an operator")
       }
     }
   }
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = AnalyzersDataInternal()): Result = {
-    def conjunction(l: List[Expression]): Result = {
+    def booleanAnd(l: List[Expression]): Result = {
       if (l.tail.isEmpty) {
-        val res = l.head.evaluate(query, analyzersDataInternal)
+        val res = l.head.matches(query, analyzersDataInternal)
         Result(score = res.score,
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
@@ -41,19 +38,10 @@ class ConjunctionOperator(children: List[Expression]) extends AbstractOperator(c
           )
         )
       } else {
-        val val1 = l.head.evaluate(query, analyzersDataInternal)
-        val val2 = conjunction(l.tail)
+        val val1 = l.head.matches(query, analyzersDataInternal)
+        val val2 = booleanAnd(l.tail)
         val finalScore = val1.score * val2.score
-        if (finalScore != 0) {
-          Result(score = finalScore,
-            AnalyzersDataInternal(
-              context = analyzersDataInternal.context,
-              traversedStates = analyzersDataInternal.traversedStates,
-              extractedVariables = val2.data.extractedVariables ++ val1.data.extractedVariables, // order is important, as var1 elements must override var2 existing elements
-              data = val2.data.data ++ val1.data.data
-            )
-          )
-        } else {
+        if (finalScore  < 1.0d) {
           Result(score = finalScore,
             AnalyzersDataInternal(
               context = analyzersDataInternal.context,
@@ -62,9 +50,18 @@ class ConjunctionOperator(children: List[Expression]) extends AbstractOperator(c
               data = analyzersDataInternal.data
             )
           )
+        } else {
+          Result(score = finalScore,
+            AnalyzersDataInternal(
+              context = analyzersDataInternal.context,
+              traversedStates = analyzersDataInternal.traversedStates,
+              extractedVariables = val2.data.extractedVariables ++ val1.data.extractedVariables, // order is important, as var1 elements must override var2 existing elements
+              data = val2.data.data ++ val1.data.data
+            )
+          )
         }
       }
     }
-    conjunction(children)
+    booleanAnd(children)
   }
 }
