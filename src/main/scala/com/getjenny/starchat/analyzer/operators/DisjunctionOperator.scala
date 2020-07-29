@@ -3,6 +3,7 @@ package com.getjenny.starchat.analyzer.operators
 import com.getjenny.analyzer.expressions._
 import com.getjenny.analyzer.operators._
 import scalaz.Scalaz._
+import scala.math.Ordering.Double.equiv
 
 /**
  * Created by mal on 21/02/2017.
@@ -27,7 +28,7 @@ class DisjunctionOperator(children: List[Expression]) extends AbstractOperator(c
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = new AnalyzersDataInternal): Result = {
     def compDisjunction(l: List[Expression]): Result = {
-      val res = l.head.evaluate(query, analyzersDataInternal)
+      val res = l(0).evaluate(query, analyzersDataInternal)
       if (l.tail.isEmpty) {
         Result(score = 1.0d - res.score,
           AnalyzersDataInternal(
@@ -43,7 +44,8 @@ class DisjunctionOperator(children: List[Expression]) extends AbstractOperator(c
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
-            extractedVariables = resTail.data.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override resTail existing elements
+            // map summation order is important, as res elements must override resTail existing elements
+            extractedVariables = resTail.data.extractedVariables ++ res.data.extractedVariables,
             data = resTail.data.data ++ res.data.data
           )
         )
@@ -51,15 +53,15 @@ class DisjunctionOperator(children: List[Expression]) extends AbstractOperator(c
     }
     val resCompDisj = compDisjunction(children)
     val finalScore = 1.0d - resCompDisj.score
-    if (finalScore != 0.0d) {
+    if (equiv(finalScore, 0.0d)) {
       Result(
         score = finalScore,
-        data = resCompDisj.data
+        data = analyzersDataInternal
       )
     } else {
       Result(
         score = finalScore,
-        data = analyzersDataInternal
+        data = resCompDisj.data
       )
     }
   }

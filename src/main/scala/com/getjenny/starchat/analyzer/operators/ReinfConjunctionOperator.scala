@@ -3,6 +3,7 @@ package com.getjenny.starchat.analyzer.operators
 import com.getjenny.analyzer.expressions._
 import com.getjenny.analyzer.operators._
 import scalaz.Scalaz._
+import scala.math.Ordering.Double.equiv
 
 /**
  * Created by angelo on 18/01/2018.
@@ -30,29 +31,27 @@ class ReinfConjunctionOperator(children: List[Expression]) extends AbstractOpera
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = new AnalyzersDataInternal): Result = {
     def reinfConjunction(l: List[Expression]): Result = {
+      val valHead = l(0).evaluate(query, analyzersDataInternal)
       if (l.tail.isEmpty) {
-        val res = l.head.evaluate(query, analyzersDataInternal)
-        //        println("SCORE_NIL: " + res.score * 1.1 + "(" + res.score + ")")
-        Result(score = res.score * 1.1,
+        Result(score = valHead.score * 1.1,
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
-            extractedVariables = analyzersDataInternal.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override pre-existing elements
-            data = analyzersDataInternal.data ++ res.data.data
+            // map summation order is important, as valHead elements must override pre-existing elements
+            extractedVariables = analyzersDataInternal.extractedVariables ++ valHead.data.extractedVariables,
+            data = analyzersDataInternal.data ++ valHead.data.data
           )
         )
       } else {
-        val val1 = l.head.evaluate(query, analyzersDataInternal)
-        val val2 = reinfConjunction(l.tail)
-        //        println("SCORE_NOT_NIL: " + (val1.score * 1.1) * val2.score + "(" + val1.score + ")" + "(" + val2.score + ")")
-        val finalScore = (val1.score * 1.1) * val2.score
-        if (finalScore != 0) {
+        val valTail = reinfConjunction(l.tail)
+        val finalScore = (valHead.score * 1.1) * valTail.score
+        if (equiv(finalScore, 0)) {
           Result(score = finalScore,
             AnalyzersDataInternal(
               context = analyzersDataInternal.context,
               traversedStates = analyzersDataInternal.traversedStates,
-              extractedVariables = val2.data.extractedVariables ++ val1.data.extractedVariables, // order is important, as var1 elements must override var2 existing elements
-              data = val2.data.data ++ val1.data.data
+              extractedVariables = analyzersDataInternal.extractedVariables,
+              data = analyzersDataInternal.data
             )
           )
         } else {
@@ -60,8 +59,9 @@ class ReinfConjunctionOperator(children: List[Expression]) extends AbstractOpera
             AnalyzersDataInternal(
               context = analyzersDataInternal.context,
               traversedStates = analyzersDataInternal.traversedStates,
-              extractedVariables = analyzersDataInternal.extractedVariables,
-              data = analyzersDataInternal.data
+              // map summation order is important, as valHead elements must override valTail existing elements
+              extractedVariables = valTail.data.extractedVariables ++ valHead.data.extractedVariables,
+              data = valTail.data.data ++ valHead.data.data
             )
           )
         }

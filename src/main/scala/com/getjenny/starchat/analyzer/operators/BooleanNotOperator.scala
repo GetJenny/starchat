@@ -41,6 +41,6 @@ class BooleanNotOperator(child: List[Expression]) extends AbstractOperator(child
       case Some(arg) => arg.matches(query, analyzersDataInternal)
       case _ => throw OperatorException("BooleanNotOperator: inner expression is empty")
     }
-    Result(score=1 - res.score, data = analyzersDataInternal)
+    Result(score = 1 - res.score, data = analyzersDataInternal)
   }
 }

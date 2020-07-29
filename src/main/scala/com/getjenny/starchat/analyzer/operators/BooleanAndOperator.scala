@@ -27,20 +27,20 @@ class BooleanAndOperator(children: List[Expression]) extends AbstractOperator(ch
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = AnalyzersDataInternal()): Result = {
     def booleanAnd(l: List[Expression]): Result = {
+      val valHead = l(0).matches(query, analyzersDataInternal)
       if (l.tail.isEmpty) {
-        val res = l.head.matches(query, analyzersDataInternal)
-        Result(score = res.score,
+        Result(score = valHead.score,
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
-            extractedVariables = analyzersDataInternal.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override pre-existing elements
-            data = analyzersDataInternal.data ++ res.data.data
+            // map summation order is important, as valHead elements must override pre-existing elements
+            extractedVariables = analyzersDataInternal.extractedVariables ++ valHead.data.extractedVariables,
+            data = analyzersDataInternal.data ++ valHead.data.data
           )
         )
       } else {
-        val val1 = l.head.matches(query, analyzersDataInternal)
-        val val2 = booleanAnd(l.tail)
-        val finalScore = val1.score * val2.score
+        val valTail = booleanAnd(l.tail)
+        val finalScore = valHead.score * valTail.score
         if (finalScore  < 1.0d) {
           Result(score = finalScore,
             AnalyzersDataInternal(
@@ -55,8 +55,9 @@ class BooleanAndOperator(children: List[Expression]) extends AbstractOperator(ch
             AnalyzersDataInternal(
               context = analyzersDataInternal.context,
               traversedStates = analyzersDataInternal.traversedStates,
-              extractedVariables = val2.data.extractedVariables ++ val1.data.extractedVariables, // order is important, as var1 elements must override var2 existing elements
-              data = val2.data.data ++ val1.data.data
+              // map summation order is important, as valHead elements must override valTail existing elements
+              extractedVariables = valTail.data.extractedVariables ++ valHead.data.extractedVariables,
+              data = valTail.data.data ++ valHead.data.data
             )
           )
         }

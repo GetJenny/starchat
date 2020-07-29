@@ -28,12 +28,13 @@ class BooleanOrOperator(children: List[Expression]) extends AbstractOperator(chi
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = AnalyzersDataInternal()): Result = {
     def booleanOr(l: List[Expression]): Result = {
-      val res = l.head.matches(query, analyzersDataInternal)
+      val res = l(0).matches(query, analyzersDataInternal)
       if (l.tail.isEmpty) {
         Result(score = 1.0d - res.score,
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
+            // map summation order is important, as res elements must override pre-existing elements
             extractedVariables = analyzersDataInternal.extractedVariables ++ res.data.extractedVariables,
             data = analyzersDataInternal.data ++ res.data.data
           )
@@ -44,7 +45,8 @@ class BooleanOrOperator(children: List[Expression]) extends AbstractOperator(chi
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
-            extractedVariables = resTail.data.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override resTail existing elements
+            // map summation order is important, as res elements must override resTail existing elements
+            extractedVariables = resTail.data.extractedVariables ++ res.data.extractedVariables,
             data = resTail.data.data ++ res.data.data
           )
         )
