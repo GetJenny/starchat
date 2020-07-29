@@ -12,20 +12,23 @@ import scala.math.Ordering.Double.equiv
 class ReinfConjunctionOperator(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
   override def toString: String = "ReinfConjunctionOperator(" + children.mkString(", ") + ")"
   def add(e: Expression, level: Int = 0): AbstractOperator = {
-    if (level === 0) {
-      new ReinfConjunctionOperator(e :: children)
-    } else if(children.isEmpty){
-      throw OperatorException("ReinfConjunctionOperator children list is empty")
-    } else {
-      children.headOption match {
-        case Some(t) =>
-          t match {
-            case c: AbstractOperator => new ReinfConjunctionOperator(c.add(e, level - 1) :: children.tail)
-            case _ => throw OperatorException("ReinfConjunctionOperator: trying to add to smt else than an operator")
+
+    level match {
+      case 0 => new ReinfConjunctionOperator(e :: children)
+      case _ =>
+        if (children.isEmpty) {
+          throw OperatorException("ReinfConjunctionOperator children list is empty")
+        } else {
+          children.headOption match {
+            case Some(t) =>
+              t match {
+                case c: AbstractOperator => new ReinfConjunctionOperator(c.add(e, level - 1) :: children.tail)
+                case _ => throw OperatorException("ReinfConjunctionOperator: trying to add to smt else than an operator")
+              }
+            case _ =>
+              throw OperatorException("ReinfConjunctionOperator: trying to add None instead of an operator")
           }
-        case _ =>
-          throw OperatorException("ReinfConjunctionOperator: trying to add None instead of an operator")
-      }
+        }
     }
   }
 

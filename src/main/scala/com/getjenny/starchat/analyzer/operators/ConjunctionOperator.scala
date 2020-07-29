@@ -2,7 +2,6 @@ package com.getjenny.starchat.analyzer.operators
 
 import com.getjenny.analyzer.expressions._
 import com.getjenny.analyzer.operators._
-import scalaz.Scalaz._
 import scala.math.Ordering.Double.equiv
 
 /**
@@ -12,20 +11,21 @@ import scala.math.Ordering.Double.equiv
 class ConjunctionOperator(children: List[Expression]) extends AbstractOperator(children: List[Expression]) {
   override def toString: String = "ConjunctionOperator(" + children.mkString(", ") + ")"
   def add(e: Expression, level: Int = 0): AbstractOperator = {
-    if (level === 0) {
-      new ConjunctionOperator(e :: children)
-    } else if(children.isEmpty){
-      throw OperatorException("ConjunctionOperator: children list is empty")
-    } else {
-      children.headOption match {
-        case Some(t) =>
-          t match {
-            case c: AbstractOperator => new ConjunctionOperator(c.add(e, level - 1) :: children.tail)
-            case _ => throw OperatorException("ConjunctionOperator: trying to add to smt else than an operator")
+    level match {
+      case 0 => new ConjunctionOperator(e :: children)
+      case _ =>
+        if (children.isEmpty) {
+          throw OperatorException("ConjunctionOperator: children list is empty")
+        } else {
+          children.headOption match {
+            case Some(t) =>
+              t match {
+                case c: AbstractOperator => new ConjunctionOperator(c.add(e, level - 1) :: children.tail)
+                case _ => throw OperatorException("ConjunctionOperator: trying to add to smt else than an operator")
+              }
+            case _ => throw OperatorException("ConjunctionOperator: trying to add None instead of an operator")
           }
-        case _ => throw OperatorException("ConjunctionOperator: trying to add None instead of an operator")
-
-      }
+        }
     }
   }
 
