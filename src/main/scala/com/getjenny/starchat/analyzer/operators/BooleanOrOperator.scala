@@ -27,10 +27,10 @@ class BooleanOrOperator(children: List[Expression]) extends AbstractOperator(chi
   }
 
   def evaluate(query: String, analyzersDataInternal: AnalyzersDataInternal = AnalyzersDataInternal()): Result = {
-    def loop(l: List[Expression]): Result = {
+    def booleanOr(l: List[Expression]): Result = {
       val res = l.head.matches(query, analyzersDataInternal)
       if (l.tail.isEmpty) {
-        Result(score = res.score,
+        Result(score = 1.0d - res.score,
           AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
@@ -39,20 +39,29 @@ class BooleanOrOperator(children: List[Expression]) extends AbstractOperator(chi
           )
         )
       } else {
-        if (res.score < 1.0d) {
-          loop(l.tail)
-        } else {
-          Result(score = res.score,
-            AnalyzersDataInternal(
+        val resTail = booleanOr(l.tail)
+        Result(score = (1.0d - res.score) * resTail.score,
+          AnalyzersDataInternal(
             context = analyzersDataInternal.context,
             traversedStates = analyzersDataInternal.traversedStates,
-            extractedVariables = analyzersDataInternal.extractedVariables ++ res.data.extractedVariables,
-            data = analyzersDataInternal.data ++ res.data.data
-            )
+            extractedVariables = resTail.data.extractedVariables ++ res.data.extractedVariables, // order is important, as res elements must override resTail existing elements
+            data = resTail.data.data ++ res.data.data
           )
-        }
+        )
       }
     }
-    loop(children)
+    val resBooleanOr = booleanOr(children)
+    val finalScore = 1.0d - resBooleanOr.score
+    if (finalScore < 1.0d) {
+      Result(
+        score = finalScore,
+        data = analyzersDataInternal
+      )
+    } else {
+      Result(
+        score = finalScore,
+        data = resBooleanOr.data
+      )
+    }
   }
 }
