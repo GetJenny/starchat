@@ -7,6 +7,7 @@ package com.getjenny.starchat.analyzer.operators
 import com.getjenny.analyzer.expressions.Expression
 import com.getjenny.analyzer.interfaces._
 import com.getjenny.analyzer.operators._
+import com.getjenny.starchat.analyzer.{operators => newOp}
 
 class StarchatFactoryOperator extends OperatorFactoryTrait[List[Expression], AbstractOperator] {
 
@@ -37,12 +38,12 @@ class StarchatFactoryOperator extends OperatorFactoryTrait[List[Expression], Abs
   )
 
   override def get(name: String, argument: List[Expression]): AbstractOperator = name.filter(c => !c.isWhitespace ) match {
-    case "booleanOr" | "booleanor" | "bor" => new BooleanOrOperator(argument)
-    case "booleanAnd"| "booleanand"| "band" => new BooleanAndOperator(argument)
-    case "booleanNot"| "booleannot"| "bnot" => new BooleanNotOperator(argument)
-    case "conjunction" | "and" => new ConjunctionOperator(argument)
-    case "disjunction" | "or" => new DisjunctionOperator(argument)
-    case "reinfConjunction" => new ReinfConjunctionOperator(argument)
+    case "booleanOr" | "booleanor" | "bor" => new newOp.BooleanOrOperator(argument)
+    case "booleanAnd"| "booleanand"| "band" => new newOp.BooleanAndOperator(argument)
+    case "booleanNot"| "booleannot"| "bnot" => new newOp.BooleanNotOperator(argument)
+    case "conjunction" | "and" => new newOp.ConjunctionOperator(argument)
+    case "disjunction" | "or" => new newOp.DisjunctionOperator(argument)
+    case "reinfConjunction" => new newOp.ReinfConjunctionOperator(argument)
     case "maximum" | "max" => new MaxOperator(argument)
     case "binarize" => new BinarizeOperator(argument)
     case "eq" => new EqOperator(argument)
