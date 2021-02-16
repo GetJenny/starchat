@@ -140,8 +140,26 @@
                 "fielddata": "true",
                 "term_vector": "with_positions_offsets",
                 "analyzer": "jenny_stemmed_ngram_4_analyzer"
+              },
+              "suggest": {
+                "type": "completion",
+                "analyzer": "jenny_base_analyzer",
+                "preserve_separators": true,
+                "preserve_position_increments": true,
+                "max_input_length": 50,
+                "contexts": [
+                  {
+                    "name": "sugg_weight",
+                    "type": "category",
+                    "path": "queries.suggestion_weight"
+                  }
+                ]
               }
             }
+          },
+          "suggestion_weight": {
+            "type":"text",
+            "store": true
           }
         }
       },

@@ -19,6 +19,7 @@ import org.elasticsearch.script.Script
 import org.elasticsearch.search.aggregations.AggregationBuilder
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.SortBuilder
+import org.elasticsearch.search.suggest.SuggestBuilder
 import scalaz.Scalaz._
 
 class EsCrudBase(val client: ElasticClient, val index: String) {
@@ -65,6 +66,36 @@ class EsCrudBase(val client: ElasticClient, val index: String) {
     requestCache.map(request.requestCache(_))
 
     log.debug("Search request: {}", request)
+
+    client.httpClient.search(request, RequestOptions.DEFAULT)
+  }
+
+  def suggest(suggestBuilder: SuggestBuilder,
+           maxItems: Option[Int] = None,
+           searchType: SearchType = SearchType.DEFAULT,
+           requestCache: Option[Boolean] = None,
+           minScore: Option[Float] = None,
+           scroll: Boolean = false,
+           scrollTime: Long = 60000,
+           version: Option[Boolean] = None,
+           fetchSource: Option[Array[String]] = None): SearchResponse = {
+
+    val search: SearchSourceBuilder = new SearchSourceBuilder()
+      .suggest(suggestBuilder)
+      .size(maxItems.getOrElse(100))
+
+    minScore.foreach(search.minScore)
+    version.foreach(search.version(_))
+    fetchSource.foreach(x => search.fetchSource(x, Array.empty[String]))
+
+    val request = new SearchRequest(index)
+      .source(search)
+      .searchType(searchType)
+
+    if (scroll) request.scroll(new TimeValue(scrollTime))
+    requestCache.map(request.requestCache(_))
+
+    log.debug("suggest request: {}", request)
 
     client.httpClient.search(request, RequestOptions.DEFAULT)
   }

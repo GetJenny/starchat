@@ -367,6 +367,63 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
+  implicit val suggesterSortAlgorithmUnmarshalling:
+    Unmarshaller[String, SuggesterSortAlgorithm.Value] =
+    Unmarshaller.strict[String, SuggesterSortAlgorithm.Value] { enumValue =>
+      SuggesterSortAlgorithm.value(enumValue)
+    }
+
+  implicit object SuggesterSortAlgorithmFormat extends JsonFormat[SuggesterSortAlgorithm.Value] {
+    def write(obj: SuggesterSortAlgorithm.Value): JsValue = JsString(obj.toString)
+
+    def read(json: JsValue): SuggesterSortAlgorithm.Value = json match {
+      case JsString(str) =>
+        SuggesterSortAlgorithm.values.find(_.toString === str) match {
+          case Some(t) => t
+          case _ => throw DeserializationException("SuggesterSortAlgorithm string is invalid")
+        }
+      case _ => throw DeserializationException("SuggesterSortAlgorithm string expected")
+    }
+  }
+
+  implicit val suggesterUnmarshalling:
+    Unmarshaller[String, Suggester.Value] =
+    Unmarshaller.strict[String, Suggester.Value] { enumValue =>
+      Suggester.value(enumValue)
+    }
+
+  implicit object SuggesterFormat extends JsonFormat[Suggester.Value] {
+    def write(obj: Suggester.Value): JsValue = JsString(obj.toString)
+
+    def read(json: JsValue): Suggester.Value = json match {
+      case JsString(str) =>
+        Suggester.values.find(_.toString === str) match {
+          case Some(t) => t
+          case _ => throw DeserializationException("Suggester string is invalid")
+        }
+      case _ => throw DeserializationException("Suggester string expected")
+    }
+  }
+
+  implicit val suggestionCategoryUnmarshalling:
+    Unmarshaller[String, SuggestionCategory.Value] =
+    Unmarshaller.strict[String, SuggestionCategory.Value] { enumValue =>
+      SuggestionCategory.value(enumValue)
+    }
+
+  implicit object SuggestionCategoryFormat extends JsonFormat[SuggestionCategory.Value] {
+    def write(obj: SuggestionCategory.Value): JsValue = JsString(obj.toString)
+
+    def read(json: JsValue): SuggestionCategory.Value = json match {
+      case JsString(str) =>
+        SuggestionCategory.values.find(_.toString === str) match {
+          case Some(t) => t
+          case _ => throw DeserializationException("SuggestionCategory string is invalid")
+        }
+      case _ => throw DeserializationException("SuggestionCategory string expected")
+    }
+  }
+
   implicit val termCountFormat = jsonFormat2(TermCount)
   implicit val totalTermsFormat = jsonFormat3(TotalTerms)
   implicit val dictSizeFormat = jsonFormat4(DictSize)
@@ -387,6 +444,10 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 
   implicit val createLanguageIndexRequestFormat = jsonFormat1(CreateLanguageIndexRequest)
   implicit val bayesOperatorCacheResponse = jsonFormat3(BayesOperatorCacheServiceResponse)
+  implicit val autoCompleteRequestFormat = jsonFormat6(AutoCompleteRequest)
+  implicit val suggestedQuery = jsonFormat3(SuggestedQuery)
+  implicit val autoCompleteResponseFormat = jsonFormat3(AutoCompleteResponse)
+
 
   implicit val dtHistoryItemUnmarshalling:
     Unmarshaller[String, DtHistoryType.Value] =
