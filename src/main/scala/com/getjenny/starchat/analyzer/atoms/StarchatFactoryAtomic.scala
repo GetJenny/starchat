@@ -7,7 +7,7 @@ package com.getjenny.starchat.analyzer.atoms
 import com.getjenny.analyzer.atoms._
 import com.getjenny.analyzer.interfaces._
 import com.getjenny.starchat.analyzer.atoms.http.custom._
-import com.getjenny.starchat.analyzer.atoms.http.{GenericVariableManager, HttpRequestAtomic}
+import com.getjenny.starchat.analyzer.atoms.http.{GenericVariableManager, HttpRequestAtomic, custom}
 
 class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAtomic, Map[String, String]] {
 
@@ -26,6 +26,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     "cosDistanceKeywords",
     "distance",
     "doubleNumberVariable",
+    "efecteApi",
     "existsVariable",
     "hasTravState",
     "hasTravStateInPosition",
@@ -81,6 +82,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     case "checkVariableContainsValue" => new CheckVariableContainsValue(argument, restrictedArgs)
     case "distance" | "cosDistanceKeywords" => new CosineDistanceAnalyzer(argument, restrictedArgs)
     case "doubleNumberVariable" => new DoubleNumberVariableAtomic(argument, restrictedArgs)
+    case "efecteApi" => new HttpRequestAtomic(argument, restrictedArgs) with UHEfecteApiVariableManager
     case "existsVariable" => new ExistsVariableAtomic(argument, restrictedArgs)
     case "hasTravState" => new HasTravStateAtomic(argument, restrictedArgs)
     case "hasTravStateInPosition" => new HasTravStateInPositionAtomic(argument, restrictedArgs)
