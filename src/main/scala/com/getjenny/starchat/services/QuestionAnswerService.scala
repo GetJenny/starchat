@@ -385,7 +385,6 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
               .must (QueryBuilders.matchQuery ("question.stem", questionQuery) )
               .should (QueryBuilders.matchPhraseQuery ("question.raw", questionQuery)
                 .boost (elasticClient.questionExactMatchBoost) )
-
             val questionNegativeNestedQuery: QueryBuilder = QueryBuilders.nestedQuery (
               "question_negative",
               QueryBuilders.matchQuery ("question_negative.query.base", questionQuery)
@@ -393,7 +392,6 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
               ScoreMode.Total
             ).ignoreUnmapped (true)
               .innerHit (new InnerHitBuilder ().setSize (100) )
-
             boolQueryBuilder.should (
               QueryBuilders.boostingQuery (questionPositiveQuery,
                 questionNegativeNestedQuery
@@ -533,7 +531,19 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
 
     annotationsIn.feedbackConv match {
       case Some(feedbackConv) =>
-        boolQueryBuilder.filter(QueryBuilders.termQuery("feedbackConv", feedbackConv))
+        feedbackConv match {
+          case "" => // empty field
+            val feedbackConvFilterQuery: QueryBuilder = QueryBuilders.boolQuery()
+              .mustNot(QueryBuilders.wildcardQuery("feedbackConv.raw", "?*"))
+            boolQueryBuilder.filter(feedbackConvFilterQuery)
+          case "*" => // existing and non-empty field
+            val feedbackConvFilterQuery: QueryBuilder = QueryBuilders.boolQuery()
+              .must(QueryBuilders.existsQuery("feedbackConv.raw"))
+              .must(QueryBuilders.wildcardQuery("feedbackConv.raw", "?*"))
+            boolQueryBuilder.filter(feedbackConvFilterQuery)
+          case _ => // all the other cases
+            boolQueryBuilder.must(QueryBuilders.matchQuery("feedbackConv", feedbackConv))
+        }
       case _ =>
     }
 
@@ -545,7 +555,7 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
       case _ =>
     }
 
-    annotationsIn.feedbackScoreConvGte match {
+    annotationsIn.feedbackScoreConvLte match {
       case Some(ts) =>
         boolQueryBuilder.filter(
           QueryBuilders.rangeQuery("feedbackConvScore")
