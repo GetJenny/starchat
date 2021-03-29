@@ -13,6 +13,8 @@ import spray.json._
  *
  * Only customer is mandatory, all other variables can be left empty.
  *
+ * Atom can be used by efecteApi() and inserting given variables in the data field.
+ *
  */
 
 trait UHEfecteApiVariableManager extends GenericVariableManager {
