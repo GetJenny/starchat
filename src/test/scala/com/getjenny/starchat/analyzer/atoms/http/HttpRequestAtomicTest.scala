@@ -875,5 +875,16 @@ class HttpRequestAtomicTest extends AnyWordSpec with Matchers with ScalatestRout
       result.data.extractedVariables.foreach(println)
       println(systemConf)
     }*/
+
+    "create a valid UHEfecteApi request" in {
+      val systemConf = SystemConfiguration
+        .createMapFromPath("starchat.atom-values")
+      val atom = new UHEfecteApiVariableManager {}
+      val args = List()
+      val extractedVariables = Map(("customer", "email@email.com"),("customerEmail", "email@email.com"),("requestType", "Test"),("subject", "testing"),("description", "test"),("categoryLevel1", "cat1"),("categoryLevel2", "cat2"),("categoryLevel3","cat3"),("contactType", "bot"),("unit", "testunit"),("supportGroup", "group1"))
+      val configuration = atom.validateAndBuild(args, systemConf, extractedVariables, "")
+      configuration shouldBe a[Success[_]]
+      configuration.map(println)
+    }
   }
 }
