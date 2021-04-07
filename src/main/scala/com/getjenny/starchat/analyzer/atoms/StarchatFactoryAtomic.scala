@@ -1,13 +1,13 @@
 package com.getjenny.starchat.analyzer.atoms
 
 /**
-  * Created by mal on 20/02/2017.
-  */
+ * Created by mal on 20/02/2017.
+ */
 
 import com.getjenny.analyzer.atoms._
 import com.getjenny.analyzer.interfaces._
 import com.getjenny.starchat.analyzer.atoms.http.custom._
-import com.getjenny.starchat.analyzer.atoms.http.{GenericVariableManager, HttpRequestAtomic, custom}
+import com.getjenny.starchat.analyzer.atoms.http.{GenericVariableManager, HttpRequestAtomic}
 
 class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAtomic, Map[String, String]] {
 

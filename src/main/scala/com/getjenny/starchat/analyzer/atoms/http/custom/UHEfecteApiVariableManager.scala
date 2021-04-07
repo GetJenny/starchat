@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import com.getjenny.starchat.analyzer.atoms.http.AtomVariableReader.VariableConfiguration
 import com.getjenny.starchat.analyzer.atoms.http.{GenericVariableManager, HttpAtomOutputConf}
 import scalaz.Scalaz._
-import spray.json._
 
 /**
  * Connect to the Efecte APi to create a ticket with given parameters
@@ -26,24 +25,24 @@ trait UHEfecteApiVariableManager extends GenericVariableManager {
   }
 }
 
-  case class UHEfecteApiOutput(override val score: String = s"${UHEfecteApiOutput.prefix}.score",
-                               EfecteApiStatus: String = s"${UHEfecteApiOutput.prefix}.status") extends HttpAtomOutputConf {
-    override def bodyParser(body: String, contentType: String, status: StatusCode): Map[String, String] = {
-      if (StatusCodes.OK.equals(status)) {
-        Map(
-          score -> "1",
-          EfecteApiStatus-> status.toString
-        )
-      } else {
-        Map(
-          score -> "0",
-          EfecteApiStatus -> status.toString
-        )
-      }
+case class UHEfecteApiOutput(override val score: String = s"${UHEfecteApiOutput.prefix}.score",
+                             EfecteApiStatus: String = s"${UHEfecteApiOutput.prefix}.status") extends HttpAtomOutputConf {
+  override def bodyParser(body: String, contentType: String, status: StatusCode): Map[String, String] = {
+    if (StatusCodes.OK.equals(status)) {
+      Map(
+        score -> "1",
+        EfecteApiStatus -> status.toString
+      )
+    } else {
+      Map(
+        score -> "0",
+        EfecteApiStatus -> status.toString
+      )
     }
-
   }
 
-  object UHEfecteApiOutput{
-    val prefix = "effecteApiResponse"
-  }
+}
+
+object UHEfecteApiOutput {
+  val prefix = "effecteApiResponse"
+}
