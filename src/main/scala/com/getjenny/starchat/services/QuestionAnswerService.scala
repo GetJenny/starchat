@@ -968,7 +968,7 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
                     .must(QueryBuilders.rangeQuery("starchatAnnotations.convIdxCounter").lte(1))
                 )
             ).subAggregation(
-              AggregationBuilders.terms("qaMatchedStatesHistogram").field("state")
+              AggregationBuilders.terms("qaMatchedStatesHistogram").size(10000).field("state")
             )
         }
         if (reqAggs.contains(QAAggregationsTypes.qaMatchedStatesWithScoreHistogram)) {
@@ -984,7 +984,7 @@ trait QuestionAnswerService extends AbstractDataService with QuestionAnswerESScr
                     .must(QueryBuilders.rangeQuery("starchatAnnotations.convIdxCounter").lte(1))
                 )
             ).subAggregation(
-              AggregationBuilders.terms("qaMatchedStatesWithScoreHistogram").field("state")
+              AggregationBuilders.terms("qaMatchedStatesWithScoreHistogram").size(10000).field("state")
             )
         }
         if (reqAggs.contains(QAAggregationsTypes.avgFeedbackNotTransferredConvScoreOverTime)) {
