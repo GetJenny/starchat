@@ -178,7 +178,7 @@ class InstanceRegistryTest extends TestBase {
 
     "get all instances" in {
 
-      val allInstances = instanceRegistry.getAll
+      val allInstances = instanceRegistry.getAll()
 
       allInstances.nonEmpty shouldEqual true
       allInstances.size shouldEqual 2

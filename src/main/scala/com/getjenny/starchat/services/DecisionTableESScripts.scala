@@ -48,7 +48,7 @@ trait DecisionTableESScripts {
                     Ai += v1 * v1;
                     Bi += v2 * v2;
                 }
-                return (AiBi/(Math.sqrt(Ai) * Math.sqrt(Bi)));
+                return 1.0d - (1.0d - (AiBi/(Math.sqrt(Ai) * Math.sqrt(Bi))))/2.0d;
                 """
 
   private[this] def reindexScriptBody(instance: String): String =
