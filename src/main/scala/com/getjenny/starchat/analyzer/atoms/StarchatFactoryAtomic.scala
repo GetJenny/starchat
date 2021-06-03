@@ -28,6 +28,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     "doubleNumberVariable",
     "efecteApi",
     "existsVariable",
+    "getLimeData",
     "hasTravState",
     "hasTravStateInPosition",
     "hasTravStateInPositionRev",
@@ -84,6 +85,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     case "doubleNumberVariable" => new DoubleNumberVariableAtomic(argument, restrictedArgs)
     case "efecteApi" => new HttpRequestAtomic(argument, restrictedArgs) with UHEfecteApiVariableManager
     case "existsVariable" => new ExistsVariableAtomic(argument, restrictedArgs)
+    case "getLimeData" => new HttpRequestAtomic(argument, restrictedArgs) with GetLimeDataVariableManager
     case "hasTravState" => new HasTravStateAtomic(argument, restrictedArgs)
     case "hasTravStateInPosition" => new HasTravStateInPositionAtomic(argument, restrictedArgs)
     case "hasTravStateInPositionRev" => new HasTravStateInPositionRevAtomic(argument, restrictedArgs)
