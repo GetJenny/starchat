@@ -99,6 +99,19 @@ object ResponseService extends AbstractDataService {
             case _ => "EMPTY CONVERSATION"
           }
         (StarChatVariables.GJ_CONVERSATION_V1.toString, conversation)
+      case StarChatVariables.GJ_CONVERSATION_JSON =>
+        val ids = DocsIds(ids = List(request.conversationId))
+        val conversation =
+          conversationLogsService.conversations(indexName, ids).conversations.headOption match {
+            case Some(value) => value.docs.map(c =>
+              c.coreData match {
+                case Some(core) =>
+                  " Question(" + c.indexInConversation + "): " + core.question.getOrElse("EMPTY") + " Answer(" + c.indexInConversation + "): " + core.answer.getOrElse("EMPTY") + " | "
+                case _ => ""
+              }).filter(_.nonEmpty).mkString("")
+            case _ => "EMPTY CONVERSATION"
+          }
+        (StarChatVariables.GJ_CONVERSATION_JSON.toString, conversation)
       case _ =>
         throw ResponseServiceException("Requested an unknown or invalid variable")
     }.toMap
