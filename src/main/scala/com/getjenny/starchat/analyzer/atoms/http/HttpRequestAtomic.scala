@@ -115,6 +115,10 @@ class HttpRequestAtomic(arguments: List[String], restrictedArgs: Map[String, Str
       case _ => url -> HttpEntity.Empty
     }
 
+    println("ByteString: " + ByteString)
+
+    println("request json: " + configuration.inputConf)
+
     HttpRequest(method = configuration.urlConf.method,
       uri = cleanUrl(finalUrl),
       headers = authHeader,

@@ -54,7 +54,7 @@ object ResponseService extends AbstractDataService {
 
   private[this] def extractSCVariables(indexName: String,
                                        input: Seq[JsObject],
-                                       request: ResponseRequestIn): Map[String, String] = {
+                                       request: ResponseRequestIn): Map[String, Any] = {
     extractSCVariables(indexName = indexName,
       variables = extractRequiredStarChatVarNames(input),
       request = request
@@ -63,7 +63,7 @@ object ResponseService extends AbstractDataService {
 
   private[this] def extractSCVariables(indexName: String,
                                        variables: Set[StarChatVariables.Value],
-                                       request: ResponseRequestIn): Map[String, String] = {
+                                       request: ResponseRequestIn): Map[String, Any] = {
     val conversationLogsService: ConversationLogsService.type = ConversationLogsService
     variables.map {
       case StarChatVariables.GJ_CONV_FEEDBACK_SCORE =>
@@ -106,9 +106,9 @@ object ResponseService extends AbstractDataService {
             case Some(value) => value.docs.map(c =>
               c.coreData match {
                 case Some(core) =>
-                  " Question(" + c.indexInConversation + "): " + core.question.getOrElse("EMPTY") + " Answer(" + c.indexInConversation + "): " + core.answer.getOrElse("EMPTY") + " | "
+                  s"""Question(${c.indexInConversation}): ${core.question.getOrElse("EMPTY")} &&& Answer(${c.indexInConversation}): ${core.answer.getOrElse("EMPTY")} """
                 case _ => ""
-              }).filter(_.nonEmpty).mkString("")
+              }).filter(_.nonEmpty).mkString("&&&").replace("&&&", "\\n")
             case _ => "EMPTY CONVERSATION"
           }
         (StarChatVariables.GJ_CONVERSATION_JSON.toString, conversation)
@@ -319,7 +319,7 @@ object ResponseService extends AbstractDataService {
   }
 
   private[this] def replaceTemplates(input: Seq[JsObject],
-                                     values: Map[String, String]): Seq[JsObject] = {
+                                     values: Map[String, Any]): Seq[JsObject] = {
     input.map { item =>
       val jsonObjString = values.foldLeft(item.toString) { case (acc, (replKey, replValue)) =>
         acc.replaceAllLiterally("%" + replKey + "%", escapeJson(replValue))
