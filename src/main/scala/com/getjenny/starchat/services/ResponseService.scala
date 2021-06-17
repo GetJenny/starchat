@@ -108,7 +108,7 @@ object ResponseService extends AbstractDataService {
                 case Some(core) =>
                   " Question(" + c.indexInConversation + "): " + core.question.getOrElse("EMPTY") + " Answer(" + c.indexInConversation + "): " + core.answer.getOrElse("EMPTY") + " | "
                 case _ => ""
-              }).filter(_.nonEmpty).mkString("")
+              }).filter(_.nonEmpty).mkString("").replaceAll("\\n", "")
             case _ => "EMPTY CONVERSATION"
           }
         (StarChatVariables.GJ_CONVERSATION_JSON.toString, conversation)
