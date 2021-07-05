@@ -18,6 +18,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
 
+case class VariableManagerException(message: String = "", cause: Throwable = None.orNull)
+  extends Exception(message, cause)
+
 /**
   * To be implemented if one does not use the generic variable manager.
   *

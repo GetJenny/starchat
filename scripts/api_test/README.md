@@ -28,3 +28,11 @@ In case you want to clean elasticsearch, in `docker-starchat` just:
 ```sh
 rm -rf elasticsearch/data/nodes/*
 ```
+
+```
+./deleteAllDT.sh index_getjenny_english_0 true
+./deleteIndexManagement.sh
+./postIndexManagementCreate.sh
+./loadDecisionTableFile.sh index_getjenny_english_0 ~/Downloads/DT\ Test\ plugin\ -\ Sheet1.csv
+./postAnalyzer.sh
+```

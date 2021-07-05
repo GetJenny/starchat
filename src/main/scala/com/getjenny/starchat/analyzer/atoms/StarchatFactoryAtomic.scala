@@ -43,6 +43,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     "matchPatternRegex",
     "parseDate",
     "parseName",
+    "plugin",
     "prevTravStateIs",
     "readRemoteData",
     "readSheetsProductsByFeature",
@@ -84,6 +85,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     case "distance" | "cosDistanceKeywords" => new CosineDistanceAnalyzer(argument, restrictedArgs)
     case "doubleNumberVariable" => new DoubleNumberVariableAtomic(argument, restrictedArgs)
     case "efecteApi" => new HttpRequestAtomic(argument, restrictedArgs) with UHEfecteApiVariableManager
+    case "entityExtractor" => new HttpRequestAtomic(argument, restrictedArgs) with EntityExtractorVariableManager
     case "existsVariable" => new ExistsVariableAtomic(argument, restrictedArgs)
     case "getLimeData" => new HttpRequestAtomic(argument, restrictedArgs) with GetLimeDataVariableManager
     case "hasTravState" => new HasTravStateAtomic(argument, restrictedArgs)
@@ -100,7 +102,7 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     case "matchPatternRegex" => new MatchPatternRegexAtomic(argument, restrictedArgs)
     case "parseDate" => new HttpRequestAtomic(argument, restrictedArgs) with ParseDateVariableManager
     case "parseName" => new HttpRequestAtomic(argument, restrictedArgs) with ParseNameVariableManager
-    case "entityExtractor" => new HttpRequestAtomic(argument, restrictedArgs) with EntityExtractorVariableManager
+    case "plugin" => new HttpRequestAtomic(argument, restrictedArgs) with PluginVariableManager
     case "prevTravStateIs" => new PrevTravStateIsAtomic(argument, restrictedArgs)
     case "readRemoteData" => new HttpRequestAtomic(argument, restrictedArgs) with ReadS3DataVariableManager
     case "readSheetsProductsByName" => new HttpRequestAtomic(argument, restrictedArgs) with ReadSheetsProductsByNameVariableManager
@@ -122,6 +124,8 @@ class StarchatFactoryAtomic extends AtomicFactoryTrait[List[String], AbstractAto
     case "toDouble" => new ToDoubleNumberAtomic(argument, restrictedArgs)
     case "vOneKeyword" => new KeywordAtomic(argument, restrictedArgs)
     case "weather" => new HttpRequestAtomic(argument, restrictedArgs) with WeatherVariableManager
+    case "zendeskTicketComments" => new HttpRequestAtomic(argument, restrictedArgs) with ZendeskTicketCommentsVariableManager
+    case "zendeskSearchTickets" => new HttpRequestAtomic(argument, restrictedArgs) with ZendeskSearchTicketsVariableManager
     case _ => throw ExceptionAtomic("Atom \'" + name + "\' not found")
   }
 }
